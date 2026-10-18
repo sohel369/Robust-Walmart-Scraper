@@ -440,6 +440,14 @@
       gap: 0.4rem;
       border-bottom: 1px solid var(--border-line);
       padding-bottom: 0.4rem;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+      display: none;
     }
 
     .nav-tab-btn {
@@ -454,6 +462,8 @@
       display: flex;
       align-items: center;
       gap: 0.45rem;
+      flex-shrink: 0;
+      white-space: nowrap;
       transition: all 0.15s ease;
     }
 
@@ -856,13 +866,22 @@
       line-height: 1.5;
     }
 
-    /* Responsive */
+    /* Responsive Media Queries */
     @media (max-width: 1200px) {
       .kpi-strip {
         grid-template-columns: repeat(3, 1fr);
       }
       .audit-container {
         grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .kpi-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .grid-container {
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
       }
     }
 
@@ -890,21 +909,53 @@
         display: none;
       }
 
-      .kpi-strip {
-        grid-template-columns: repeat(2, 1fr);
+      .toolbar-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+
+      .search-box {
+        min-width: 100%;
+        width: 100%;
+      }
+
+      .controls-group {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .custom-select {
+        flex: 1;
       }
 
       main {
         padding: 0.65rem 0.85rem;
       }
+
+      .panel-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+      }
     }
 
-    @media (max-width: 480px) {
+    @media (max-width: 520px) {
       .kpi-strip {
+        grid-template-columns: 1fr;
+      }
+      .grid-container {
         grid-template-columns: 1fr;
       }
       .brand-title {
         font-size: 0.95rem;
+      }
+      .brand-sub {
+        display: none;
+      }
+      .modal-card {
+        width: 96%;
+        padding: 0.85rem;
       }
     }
   </style>
