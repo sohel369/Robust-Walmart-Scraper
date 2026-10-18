@@ -1,0 +1,29 @@
+[
+  {
+    "store_id": "5260",
+    "zipcode": "72712",
+    "store_name": "Bentonville Supercenter",
+    "store_location": "406 S Walton Blvd, Bentonville, AR 72712",
+    "store_logo": "https://i5.walmartimages.com/dfw/63fd9f59-b3e1/7a569e53-f89a-4b47-97e6-d458b8a0204f/v1/walmartLogo.svg",
+    "fulfillment_intent": "pickup",
+    "is_default": true
+  },
+  {
+    "store_id": "2648",
+    "zipcode": "75201",
+    "store_name": "Dallas Supercenter",
+    "store_location": "2305 N Central Expy, Dallas, TX 75204",
+    "store_logo": "https://i5.walmartimages.com/dfw/63fd9f59-b3e1/7a569e53-f89a-4b47-97e6-d458b8a0204f/v1/walmartLogo.svg",
+    "fulfillment_intent": "pickup",
+    "is_default": false
+  },
+  {
+    "store_id": "0890",
+    "zipcode": "32809",
+    "store_name": "Orlando Supercenter",
+    "store_location": "8990 S Orange Blossom Trl, Orlando, FL 32809",
+    "store_logo": "https://i5.walmartimages.com/dfw/63fd9f59-b3e1/7a569e53-f89a-4b47-97e6-d458b8a0204f/v1/walmartLogo.svg",
+    "fulfillment_intent": "pickup",
+    "is_default": false
+  }
+]

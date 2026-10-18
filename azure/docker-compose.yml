@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  walmart-scraper:
+    build:
+      context: ..
+      dockerfile: azure/Dockerfile
+    container_name: walmart-production-scraper
+    environment:
+      - WALMART_PROXY_URL=${WALMART_PROXY_URL:-}
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING:-}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../data/output:/app/data/output
+      - ../data/checkpoints:/app/data/checkpoints
+      - ../config:/app/config
+    restart: "no"
