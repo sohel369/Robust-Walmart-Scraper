@@ -79,13 +79,20 @@ class ConfigLoader:
         with open(csv_path, "r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                cat = row.get("category", "").strip()
-                sub = row.get("sub_category", "").strip()
-                url = row.get("url", "").strip()
+                # Support both official "Category (Auto)" and simplified "category"
+                cat = (row.get("Category (Auto)") or row.get("category") or "").strip()
+                sub = (row.get("sub_category") or "All Subcategories").strip()
+                url = (row.get("URL") or row.get("url") or "").strip()
+                scope = (row.get("Scope") or "").strip()
+                notes = (row.get("Notes") or "").strip()
+
                 if url:
                     categories.append({
                         "category": cat,
                         "sub_category": sub,
-                        "url": url
+                        "url": url,
+                        "scope": scope,
+                        "notes": notes
                     })
         return categories
+

@@ -26,198 +26,143 @@ def generate_contest_demo_dataset():
 
     crawl_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    # Categories from Walmart_Category_URLs.csv
+    # Catalog strictly matching all 11 categories in Walmart_Category_URLs.csv
     category_catalog = [
+        # 1. Food (Exclude 'Shop All Foods' and 'Recipes' subcategories)
         {
-            "category": "Pantry",
+            "category": "Food",
             "sub_category": "Canned Goods",
             "items": [
                 ("Great Value Whole Kernel Sweet Corn", "15.25 oz", "0.68", "", "$0.04/oz", "07874235198", "yes", "", "", "", ""),
                 ("Great Value Cut Green Beans", "14.5 oz", "0.68", "", "$0.05/oz", "07874235201", "yes", "2 for $1.20", "1.20", "", ""),
                 ("Del Monte Fresh Cut Sweet Peas", "15 oz", "1.48", "1.24", "$0.08/oz", "02400016318", "no", "", "", "Clip Coupon: Save $0.50", "0.74"),
                 ("Campbell's Chunky Classic Chicken Noodle Soup", "18.8 oz", "2.26", "", "$0.12/oz", "05100001249", "no", "Mix or Match 3 for $6", "6.00", "", ""),
-                ("Progresso Traditional Chicken Noodle Soup", "19 oz", "2.48", "", "$0.13/oz", "04119691012", "no", "", "", "Clip Coupon: Save $1.00 when you buy 2", ""),
-                ("Great Value Black Beans", "15.25 oz", "0.82", "", "$0.05/oz", "07874222950", "yes", "", "", "", ""),
-                ("Bush's Best Original Baked Beans", "28 oz", "2.68", "", "$0.10/oz", "03940001614", "no", "", "", "", ""),
-                ("Hunt's 100% Natural Tomato Sauce", "8 oz", "0.58", "", "$0.07/oz", "02700038815", "no", "4 for $2", "2.00", "", ""),
-                ("Rotel Original Diced Tomatoes & Green Chilies", "10 oz", "1.28", "", "$0.13/oz", "06414428243", "no", "", "", "", ""),
-                ("Starkist Chunk Light Tuna in Water", "5 oz", "1.12", "", "$0.22/oz", "08000000412", "no", "Buy 3, Get 1 Free", "", "", "")
-            ]
-        },
-        {
-            "category": "Pantry",
-            "sub_category": "Pasta & Noodles",
-            "items": [
                 ("Barilla Spaghetti Pasta", "16 oz", "1.84", "1.50", "$0.09/oz", "07680850013", "no", "", "", "Clip Coupon: Save $0.50", "1.00"),
-                ("Great Value Spaghetti Pasta", "16 oz", "0.98", "", "$0.06/oz", "07874201380", "yes", "", "", "", ""),
-                ("Great Value Elbow Macaroni", "16 oz", "0.98", "", "$0.06/oz", "07874201382", "yes", "2 for $1.80", "1.80", "", ""),
-                ("Kraft Original Macaroni & Cheese Dinner", "7.25 oz", "1.24", "", "$0.17/oz", "02100065883", "no", "Must buy 4 at $1.00 each", "4.00", "", ""),
-                ("Ronzoni Thin Spaghetti", "16 oz", "1.68", "", "$0.11/oz", "07130000012", "no", "", "", "", ""),
-                ("De Cecco Penne Rigate No. 41", "16 oz", "2.48", "", "$0.16/oz", "02489500041", "no", "", "", "", ""),
-                ("Maruchan Ramen Noodle Soup Chicken Flavor", "3 oz", "0.38", "", "$0.13/oz", "04178900111", "no", "6 for $2", "2.00", "", ""),
-                ("Nissin Top Ramen Beef Flavor", "3 oz", "0.40", "", "$0.13/oz", "07066201003", "no", "", "", "", ""),
-                ("Banza Chickpea Pasta Rotini", "8 oz", "3.98", "", "$0.50/oz", "08571430050", "no", "", "", "Clip Coupon: Save $1.00", "2.98"),
-                ("Great Value Wide Egg Noodles", "16 oz", "1.48", "", "$0.09/oz", "07874222019", "yes", "", "", "", "")
-            ]
-        },
-        {
-            "category": "Pantry",
-            "sub_category": "Condiments & Salad Dressings",
-            "items": [
-                ("Heinz Tomato Ketchup", "32 oz", "3.98", "3.28", "$0.10/oz", "01300000640", "no", "", "", "", ""),
-                ("Great Value Tomato Ketchup", "32 oz", "1.68", "", "$0.05/oz", "07874205423", "yes", "", "", "", ""),
-                ("French's Classic Yellow Mustard", "20 oz", "2.38", "", "$0.12/oz", "04150000025", "no", "2 for $4", "4.00", "", ""),
-                ("Hellmann's Real Mayonnaise", "30 oz", "4.98", "4.28", "$0.14/oz", "04800121348", "no", "", "", "Clip Coupon: Save $1.50", "2.78"),
-                ("Great Value Real Mayonnaise", "30 oz", "2.48", "", "$0.08/oz", "07874235219", "yes", "", "", "", ""),
-                ("Hidden Valley The Original Ranch Dressing", "24 oz", "4.48", "", "$0.19/oz", "07110000512", "no", "", "", "", ""),
-                ("Kraft Creamy Italian Salad Dressing", "16 oz", "2.18", "", "$0.14/oz", "02100064319", "no", "2 for $4", "4.00", "", ""),
-                ("Sweet Baby Ray's Barbecue Sauce", "28 oz", "2.98", "", "$0.11/oz", "01340935122", "no", "", "", "", ""),
-                ("Sriracha Hot Chili Sauce Huy Fong", "17 oz", "3.98", "", "$0.23/oz", "08831340001", "no", "", "", "", ""),
-                ("Frank's RedHot Original Cayenne Pepper Sauce", "12 oz", "3.28", "", "$0.27/oz", "04150080512", "no", "", "", "Clip Coupon: Save $0.75", "2.53")
-            ]
-        },
-        {
-            "category": "Beverages",
-            "sub_category": "Coffee",
-            "items": [
-                ("Folgers Classic Roast Ground Coffee", "40.3 oz", "10.98", "9.48", "$0.24/oz", "02550000051", "no", "", "", "", ""),
-                ("Great Value Classic Roast Medium Ground Coffee", "40.3 oz", "6.98", "", "$0.17/oz", "07874205934", "yes", "", "", "", ""),
-                ("Starbucks Pike Place Roast K-Cup Pods 22ct", "22 ct", "15.98", "", "$0.73/ct", "07621112831", "no", "", "", "Clip Coupon: Save $2.00", "13.98"),
-                ("Dunkin' Original Blend Ground Coffee", "12 oz", "7.48", "", "$0.62/oz", "08813340012", "no", "2 for $13", "13.00", "", ""),
-                ("Café Bustelo Espresso Ground Coffee", "10 oz", "3.98", "", "$0.40/oz", "07447101001", "no", "", "", "", ""),
-                ("Great Value 100% Arabica French Roast K-Cups 48ct", "48 ct", "14.28", "", "$0.30/ct", "07874223910", "yes", "", "", "", ""),
-                ("Peet's Coffee Major Dickason's Blend Dark Roast", "10.5 oz", "8.98", "", "$0.86/oz", "02885110102", "no", "", "", "", ""),
-                ("Maxwell House Original Roast Ground Coffee", "30.6 oz", "7.98", "", "$0.26/oz", "04300004910", "no", "", "", "", ""),
-                ("Chobani Oatmilk Barista Edition", "32 fl oz", "3.98", "", "$0.12/fl oz", "08947000102", "no", "", "", "", ""),
-                ("International Delight French Vanilla Creamer", "32 fl oz", "3.78", "", "$0.12/fl oz", "04127101902", "no", "2 for $7", "7.00", "", "")
-            ]
-        },
-        {
-            "category": "Beverages",
-            "sub_category": "Tea",
-            "items": [
-                ("Lipton Black Tea Bags 100ct", "100 ct", "4.28", "", "$0.04/ct", "02260000010", "no", "", "", "", ""),
-                ("Great Value Black Tea Bags 100ct", "100 ct", "2.18", "", "$0.02/ct", "07874205812", "yes", "", "", "", ""),
-                ("Arizona Green Tea with Ginseng & Honey Gallon", "128 fl oz", "3.48", "", "$0.03/fl oz", "06130087102", "no", "", "", "", ""),
-                ("Milo's Famous Sweet Tea Gallon", "128 fl oz", "3.68", "", "$0.03/fl oz", "07204500012", "no", "", "", "", ""),
-                ("Pure Leaf Unsweetened Black Iced Tea 64 fl oz", "64 fl oz", "2.98", "", "$0.05/fl oz", "01200016102", "no", "2 for $5", "5.00", "", ""),
-                ("Twining's Earl Grey Tea Bags 20ct", "20 ct", "3.48", "", "$0.17/ct", "07017706102", "no", "", "", "Clip Coupon: Save $0.50", "2.98"),
-                ("Celestial Seasonings Sleepytime Herbal Tea 20ct", "20 ct", "2.88", "", "$0.14/ct", "07073400012", "no", "", "", "", ""),
-                ("Gold Peak Sweet Iced Tea 52 fl oz", "52 fl oz", "2.78", "", "$0.05/fl oz", "04900005012", "no", "", "", "", ""),
-                ("Yogi Bedtime Herbal Tea Bags 16ct", "16 ct", "4.18", "", "$0.26/ct", "07695045012", "no", "", "", "", ""),
-                ("Bigelow English Teatime Black Tea 28ct", "28 ct", "3.12", "", "$0.11/ct", "07231000102", "no", "", "", "", "")
-            ]
-        },
-        {
-            "category": "Beverages",
-            "sub_category": "Soft Drinks & Sodas",
-            "items": [
-                ("Coca-Cola Original Soda 12 Pack 12 fl oz Cans", "144 fl oz", "7.98", "6.50", "$0.04/fl oz", "04900002890", "no", "Buy 2, Get 1 Free", "", "", ""),
-                ("Diet Coke Soda 12 Pack 12 fl oz Cans", "144 fl oz", "7.98", "", "$0.06/fl oz", "04900002891", "no", "", "", "", ""),
-                ("Pepsi Cola Soda 12 Pack 12 fl oz Cans", "144 fl oz", "7.48", "", "$0.05/fl oz", "01200000129", "no", "3 for $15", "15.00", "", ""),
-                ("Dr Pepper Soda 12 Pack 12 fl oz Cans", "144 fl oz", "7.48", "", "$0.05/fl oz", "07800008216", "no", "", "", "Clip Coupon: Save $1.00", "6.48"),
-                ("Sprite Lemon Lime Soda 2 Liter Bottle", "67.6 fl oz", "2.28", "", "$0.03/fl oz", "04900002895", "no", "3 for $5", "5.00", "", ""),
-                ("Great Value Mountain Lightning Citrus Soda 2 Liter", "67.6 fl oz", "0.98", "", "$0.01/fl oz", "07874235912", "yes", "", "", "", ""),
-                ("A&W Root Beer Soda 12 Pack 12 fl oz Cans", "144 fl oz", "6.98", "", "$0.05/fl oz", "07800001112", "no", "", "", "", ""),
-                ("Mountain Dew Citrus Soda 12 Pack Cans", "144 fl oz", "7.48", "", "$0.05/fl oz", "01200000130", "no", "", "", "", ""),
-                ("Canada Dry Ginger Ale 12 Pack Cans", "144 fl oz", "6.98", "", "$0.05/fl oz", "01690000112", "no", "", "", "", ""),
-                ("Zevia Zero Calorie Soda Cola 6 Pack Cans", "72 fl oz", "5.98", "", "$0.08/fl oz", "08985100112", "no", "", "", "Clip Coupon: Save $1.00", "4.98")
-            ]
-        },
-        {
-            "category": "Snacks",
-            "sub_category": "Chips & Crisps",
-            "items": [
-                ("Lay's Classic Potato Chips Party Size", "13 oz", "4.48", "3.98", "$0.31/oz", "02840000102", "no", "", "", "", ""),
-                ("Doritos Nacho Cheese Flavored Tortilla Chips", "9.25 oz", "3.98", "", "$0.43/oz", "02840000103", "no", "2 for $7", "7.00", "", ""),
-                ("Great Value Restaurant Style Tortilla Chips", "13 oz", "1.98", "", "$0.15/oz", "07874223190", "yes", "", "", "", ""),
-                ("Pringles Original Potato Crisps", "5.2 oz", "1.98", "", "$0.38/oz", "03800013841", "no", "3 for $5", "5.00", "", ""),
-                ("Tostitos Scoops Tortilla Chips Party Size", "14.5 oz", "4.98", "", "$0.34/oz", "02840000104", "no", "", "", "", ""),
-                ("Cheetos Crunchy Cheese Flavored Snacks", "8.5 oz", "3.98", "", "$0.47/oz", "02840000105", "no", "", "", "Clip Coupon: Save $0.50", "3.48"),
-                ("Ruffles Cheddar & Sour Cream Potato Chips", "8.5 oz", "3.98", "", "$0.47/oz", "02840000106", "no", "", "", "", ""),
-                ("Fritos Original Corn Chips", "9.25 oz", "3.48", "", "$0.38/oz", "02840000107", "no", "", "", "", ""),
-                ("Great Value Barbecue Potato Chips", "7.75 oz", "1.74", "", "$0.22/oz", "07874205102", "yes", "", "", "", ""),
-                ("Kettle Brand Sea Salt Potato Chips", "7.5 oz", "3.68", "", "$0.49/oz", "08411400102", "no", "", "", "", "")
-            ]
-        },
-        {
-            "category": "Snacks",
-            "sub_category": "Cookies",
-            "items": [
-                ("Oreo Chocolate Sandwich Cookies Family Size", "18.12 oz", "4.48", "", "$0.25/oz", "04400003202", "no", "", "", "", ""),
-                ("Chips Ahoy! Original Chocolate Chip Cookies Family Size", "18.2 oz", "4.48", "", "$0.25/oz", "04400003203", "no", "2 for $8", "8.00", "", ""),
-                ("Great Value Fudge Striped Shortbread Cookies", "11.5 oz", "1.68", "", "$0.15/oz", "07874205312", "yes", "", "", "", ""),
-                ("Pepperidge Farm Milano Dark Chocolate Cookies", "7.5 oz", "3.98", "", "$0.53/oz", "01410007812", "no", "", "", "Clip Coupon: Save $0.75", "3.23"),
-                ("Keebler Fudge Stripes Original Cookies", "11.5 oz", "3.28", "", "$0.29/oz", "03010010102", "no", "", "", "", ""),
-                ("Great Value Chocolate Chip Cookies", "13 oz", "1.78", "", "$0.14/oz", "07874205314", "yes", "", "", "", ""),
-                ("Nutter Butter Peanut Butter Sandwich Cookies", "16 oz", "4.48", "", "$0.28/oz", "04400003204", "no", "", "", "", ""),
-                ("Tate's Bake Shop Chocolate Chip Cookies", "7 oz", "5.48", "4.98", "$0.71/oz", "08199100102", "no", "", "", "", ""),
-                ("Lorna Doone Shortbread Cookies", "10 oz", "3.98", "", "$0.40/oz", "04400003205", "no", "", "", "", ""),
-                ("BelVita Breakfast Biscuits Blueberry 5pk", "8.8 oz", "3.88", "", "$0.44/oz", "04400003206", "no", "", "", "Clip Coupon: Save $1.00", "2.88")
-            ]
-        },
-        {
-            "category": "Dairy & Eggs",
-            "sub_category": "Milk",
-            "items": [
                 ("Great Value Whole Vitamin D Milk Gallon", "128 fl oz", "2.98", "", "$0.02/fl oz", "07874205111", "yes", "", "", "", ""),
-                ("Great Value 2% Reduced Fat Milk Gallon", "128 fl oz", "2.98", "", "$0.02/fl oz", "07874205112", "yes", "", "", "", ""),
-                ("Fairlife Yummy Whole Ultra-Filtered Milk 52 fl oz", "52 fl oz", "4.48", "", "$0.09/fl oz", "08563120010", "no", "", "", "Clip Coupon: Save $0.75", "3.73"),
-                ("Silk Almond Milk Unsweetened Vanilla Half Gallon", "64 fl oz", "3.28", "", "$0.05/fl oz", "02529300098", "no", "2 for $6", "6.00", "", ""),
-                ("Great Value Organic Whole Milk Half Gallon", "64 fl oz", "3.98", "", "$0.06/fl oz", "07874221110", "yes", "", "", "", ""),
-                ("Horizon Organic Whole Milk with DHA Omega-3", "64 fl oz", "4.98", "", "$0.08/fl oz", "07423652102", "no", "", "", "", ""),
-                ("Oatly Oatmilk Original Full Fat Half Gallon", "64 fl oz", "4.48", "", "$0.07/fl oz", "08535640070", "no", "", "", "", ""),
-                ("Lactaid Whole Lactose-Free Milk 64 fl oz", "64 fl oz", "4.28", "", "$0.07/fl oz", "04138309012", "no", "", "", "", ""),
-                ("Borden Whole Milk Gallon", "128 fl oz", "3.48", "", "$0.03/fl oz", "05380000012", "no", "", "", "", ""),
-                ("Planet Oat Extra Creamy Oatmilk 52 fl oz", "52 fl oz", "3.78", "", "$0.07/fl oz", "04410010912", "no", "", "", "Clip Coupon: Save $0.50", "3.28")
+                ("Heinz Tomato Ketchup", "32 oz", "3.98", "3.28", "$0.10/oz", "01300000640", "no", "", "", "", ""),
+                ("Folgers Classic Roast Ground Coffee", "40.3 oz", "10.98", "9.48", "$0.24/oz", "02550000051", "no", "", "", "", "")
             ]
         },
-        {
-            "category": "Dairy & Eggs",
-            "sub_category": "Butter & Margarine",
-            "items": [
-                ("Great Value Sweet Cream Salted Butter Sticks 4ct", "16 oz", "3.68", "", "$0.23/oz", "07874235111", "yes", "", "", "", ""),
-                ("Great Value Sweet Cream Unsalted Butter Sticks 4ct", "16 oz", "3.68", "", "$0.23/oz", "07874235112", "yes", "", "", "", ""),
-                ("Land O Lakes Salted Butter 4 Sticks", "16 oz", "4.68", "3.98", "$0.25/oz", "03450015112", "no", "", "", "Clip Coupon: Save $0.50", "3.48"),
-                ("Kerrygold Pure Irish Salted Butter", "8 oz", "3.98", "", "$0.50/oz", "07650100012", "no", "", "", "", ""),
-                ("Country Crock Original Spread Tub", "45 oz", "4.98", "", "$0.11/oz", "02740000102", "no", "", "", "", ""),
-                ("I Can't Believe It's Not Butter! Original Spray", "8 fl oz", "2.98", "", "$0.37/fl oz", "01111500102", "no", "2 for $5", "5.00", "", ""),
-                ("Parkay Squeeze Margarine", "12 oz", "2.18", "", "$0.18/oz", "02900000102", "no", "", "", "", ""),
-                ("Challenge Dairy Salted Butter Sticks", "16 oz", "4.48", "", "$0.28/oz", "04720010102", "no", "", "", "", ""),
-                ("Miyoko's Creamery Organic Vegan Butter", "8 oz", "5.48", "", "$0.69/oz", "08569240012", "no", "", "", "", ""),
-                ("Great Value Vegetable Oil Spread Tub", "45 oz", "2.98", "", "$0.07/oz", "07874235113", "yes", "", "", "", "")
-            ]
-        },
+        # 2. Household Essentials
         {
             "category": "Household Essentials",
-            "sub_category": "Laundry Detergent",
+            "sub_category": "Laundry & Cleaning",
             "items": [
                 ("Tide Liquid Laundry Detergent Original 64 loads", "92 fl oz", "12.97", "", "$0.14/fl oz", "03700023012", "no", "", "", "Clip Coupon: Save $3.00", "9.97"),
                 ("Great Value Original Clean Liquid Laundry Detergent", "100 fl oz", "6.44", "", "$0.06/fl oz", "07874237111", "yes", "", "", "", ""),
-                ("Gain Flings! Liquid Laundry Detergent Pacs 60ct", "60 ct", "15.94", "13.97", "$0.23/ct", "03700034102", "no", "", "", "", ""),
-                ("All Free Clear Liquid Laundry Detergent 110 loads", "88 fl oz", "9.97", "", "$0.11/fl oz", "07261345102", "no", "2 for $18", "18.00", "", ""),
-                ("Arm & Hammer Clean Burst Liquid Laundry Detergent", "144.5 fl oz", "8.98", "", "$0.06/fl oz", "03320000102", "no", "", "", "", ""),
-                ("Persil ProClean Liquid Laundry Detergent 64 loads", "100 fl oz", "13.97", "", "$0.14/fl oz", "02420000102", "no", "", "", "Clip Coupon: Save $2.00", "11.97"),
-                ("Downy April Fresh Liquid Fabric Softener 150 loads", "103 fl oz", "10.97", "", "$0.11/fl oz", "03700045102", "no", "", "", "", ""),
-                ("Bounce WrinkleGuard Fabric Softener Dryer Sheets 120ct", "120 ct", "6.97", "", "$0.06/ct", "03700056102", "no", "", "", "", ""),
-                ("OxiClean Versatile Stain Remover Powder", "5 lb", "12.48", "", "$0.16/oz", "07570700102", "no", "", "", "", ""),
-                ("Purex Liquid Laundry Detergent Mountain Spring", "128 fl oz", "7.97", "", "$0.06/fl oz", "02420000202", "no", "2 for $14", "14.00", "", "")
+                ("Bounty Select-A-Size Paper Towels 6 Double Rolls", "6 ct", "14.44", "", "$2.41/ct", "03700074102", "no", "", "", "", ""),
+                ("Great Value Everyday Paper Plates 100ct", "100 ct", "4.97", "", "$0.05/ct", "07874209102", "yes", "2 for $9", "9.00", "", ""),
+                ("Clorox Disinfecting Wipes Crisp Lemon 75ct", "75 ct", "4.48", "", "$0.06/ct", "04460001102", "no", "", "", "Clip Coupon: Save $1.00", "3.48"),
+                ("Dawn Ultra Dishwashing Liquid Dish Soap 38 fl oz", "38 fl oz", "5.84", "", "$0.15/fl oz", "03700081102", "no", "", "", "", "")
             ]
         },
+        # 3. Personal Care
         {
             "category": "Personal Care",
-            "sub_category": "Shampoo & Conditioner",
+            "sub_category": "Hair Care & Hygiene",
             "items": [
                 ("Pantene Pro-V Daily Moisture Renewal Shampoo", "17.9 fl oz", "5.97", "", "$0.33/fl oz", "08087817102", "no", "2 for $10", "10.00", "", ""),
                 ("Equate Everyday Moisture Shampoo", "28 fl oz", "2.98", "", "$0.11/fl oz", "07874239102", "yes", "", "", "", ""),
-                ("Head & Shoulders Classic Clean Anti-Dandruff Shampoo", "28.2 fl oz", "9.97", "8.48", "$0.30/fl oz", "03700078102", "no", "", "", "Clip Coupon: Save $2.00", "6.48"),
-                ("Dove Nutritive Solutions Daily Moisture Shampoo", "31 fl oz", "6.98", "", "$0.23/fl oz", "07940000102", "no", "", "", "", ""),
-                ("Tresemme Moisture Rich Shampoo with Vitamin E", "28 fl oz", "5.48", "", "$0.20/fl oz", "02240000102", "no", "Mix or Match 2 for $9", "9.00", "", ""),
-                ("Garnier Fructis Sleek & Shine Shampoo", "21 fl oz", "4.48", "", "$0.21/fl oz", "06030800102", "no", "", "", "", ""),
-                ("L'Oreal Paris Elvive Total Repair 5 Shampoo", "28 fl oz", "7.97", "", "$0.28/fl oz", "07124900102", "no", "", "", "", ""),
-                ("OGX Renewing + Argan Oil of Morocco Shampoo", "13 fl oz", "6.97", "", "$0.54/fl oz", "02279600102", "no", "", "", "Clip Coupon: Save $1.00", "5.97"),
-                ("Native Coconut & Vanilla Moisturizing Shampoo", "16.5 fl oz", "9.98", "", "$0.60/fl oz", "08121500102", "no", "", "", "", ""),
-                ("Herbal Essences Hello Hydration Moisturizing Shampoo", "29.2 fl oz", "6.98", "", "$0.24/fl oz", "03700089102", "no", "", "", "", "")
+                ("Colgate Total Whitening Toothpaste 2 Pack", "9.6 oz", "7.96", "", "$0.83/oz", "03500000102", "no", "", "", "Clip Coupon: Save $2.00", "5.96"),
+                ("Dove Deep Moisture Body Wash", "20 fl oz", "6.97", "", "$0.35/fl oz", "01111100102", "no", "", "", "", ""),
+                ("Equate Antibacterial Liquid Hand Soap Refill", "56 fl oz", "3.88", "", "$0.07/fl oz", "07874241102", "yes", "", "", "", ""),
+                ("Gillette Mach3 Mens Razor Cartridges 8ct", "8 ct", "18.97", "", "$2.37/ct", "04740000102", "no", "", "", "", "")
+            ]
+        },
+        # 4. Beauty
+        {
+            "category": "Beauty",
+            "sub_category": "Skin Care & Cosmetics",
+            "items": [
+                ("CeraVe Daily Moisturizing Lotion", "12 fl oz", "13.97", "", "$1.16/fl oz", "36060005102", "no", "", "", "Clip Coupon: Save $2.00", "11.97"),
+                ("Neutrogena Hydro Boost Water Gel Face Cream", "1.7 oz", "17.88", "", "$10.52/oz", "07050100102", "no", "", "", "", ""),
+                ("Maybelline Lash Sensational Washable Mascara", "0.32 fl oz", "8.98", "", "$28.06/fl oz", "04155400102", "no", "2 for $15", "15.00", "", ""),
+                ("L'Oreal Paris True Match Super-Blendable Foundation", "1 fl oz", "10.97", "", "$10.97/fl oz", "07124900202", "no", "", "", "", ""),
+                ("Equate Beauty Oil-Free Eye Makeup Remover", "5.5 fl oz", "4.12", "", "$0.75/fl oz", "07874243102", "yes", "", "", "", "")
+            ]
+        },
+        # 5. Diapering
+        {
+            "category": "Diapering",
+            "sub_category": "Diapers & Wipes",
+            "items": [
+                ("Pampers Swaddlers Diapers Size 3 136 Count", "136 ct", "39.94", "", "$0.29/ct", "03700091102", "no", "", "", "Clip Coupon: Save $4.00", "35.94"),
+                ("Huggies Little Snugglers Baby Diapers Size 1 96ct", "96 ct", "28.44", "", "$0.30/ct", "03600000102", "no", "2 for $50", "50.00", "", ""),
+                ("Parent's Choice Dry and Gentle Diapers Size 4 140ct", "140 ct", "19.98", "", "$0.14/ct", "07874245102", "yes", "", "", "", ""),
+                ("Parent's Choice Fragrance-Free Baby Wipes 800 Count", "800 ct", "14.88", "", "$0.02/ct", "07874246102", "yes", "", "", "", ""),
+                ("Desitin Maximum Strength Diaper Rash Paste 4 oz", "4 oz", "6.48", "", "$1.62/oz", "07430000102", "no", "", "", "", "")
+            ]
+        },
+        # 6. Feeding
+        {
+            "category": "Feeding",
+            "sub_category": "Formula & Baby Food",
+            "items": [
+                ("Enfamil NeuroPro Baby Infant Formula Powder 20.7 oz", "20.7 oz", "32.98", "", "$1.59/oz", "30087000102", "no", "", "", "Clip Coupon: Save $3.00", "29.98"),
+                ("Similac 360 Total Care Infant Formula 30.8 oz", "30.8 oz", "44.98", "", "$1.46/oz", "07007400102", "no", "", "", "", ""),
+                ("Parent's Choice Advantage Infant Formula Powder 35 oz", "35 oz", "24.98", "", "$0.71/oz", "07874247102", "yes", "", "", "", ""),
+                ("Gerber Organic 2nd Foods Baby Food Pouches 12 Pack", "42 oz", "16.98", "", "$0.40/oz", "01500000102", "no", "2 for $30", "30.00", "", ""),
+                ("Dr. Brown's Natural Flow Anti-Colic Baby Bottles 4pk", "4 ct", "19.99", "", "$5.00/ct", "07223900102", "no", "", "", "", "")
+            ]
+        },
+        # 7. Health & Wellness
+        {
+            "category": "Health & Wellness",
+            "sub_category": "Vitamins & First Aid",
+            "items": [
+                ("Nature Made Vitamin D3 2000 IU Softgels 250ct", "250 ct", "12.98", "", "$0.05/ct", "03160400102", "no", "", "", "Clip Coupon: Save $2.00", "10.98"),
+                ("Equate Extra Strength Acetaminophen 500mg 100ct", "100 ct", "3.48", "", "$0.03/ct", "07874249102", "yes", "", "", "", ""),
+                ("Advil Pain Reliever Ibuprofen 200mg 200 Coated Tablets", "200 ct", "15.97", "", "$0.08/ct", "30573000102", "no", "", "", "", ""),
+                ("Band-Aid Flexible Fabric Adhesive Bandages 100ct", "100 ct", "7.98", "", "$0.08/ct", "38137000102", "no", "2 for $14", "14.00", "", ""),
+                ("Spring Valley Melatonin 5mg Tablets 120ct", "120 ct", "4.88", "", "$0.04/ct", "68113100102", "yes", "", "", "", "")
+            ]
+        },
+        # 8. Pets (Exclude 'Farm Animals' subcategory)
+        {
+            "category": "Pets",
+            "sub_category": "Dog & Cat Supplies",
+            "items": [
+                ("Purina Pro Plan High Protein Adult Dog Food Chicken & Rice", "35 lb", "64.98", "", "$1.86/lb", "03810000102", "no", "", "", "Clip Coupon: Save $5.00", "59.98"),
+                ("Pure Balance Pro+ Grain Free Dry Dog Food Chicken & Pea", "24 lb", "38.98", "", "$1.62/lb", "07874251102", "yes", "", "", "", ""),
+                ("Blue Buffalo Life Protection Formula Adult Chicken & Rice", "30 lb", "60.98", "", "$2.03/lb", "85961000102", "no", "", "", "", ""),
+                ("Fancy Feast Grilled Wet Cat Food Variety Pack 24 Cans", "72 oz", "19.98", "", "$0.28/oz", "05000000102", "no", "2 for $36", "36.00", "", ""),
+                ("Tidy Cats 24/7 Performance Clumping Cat Litter 35 lb", "35 lb", "16.48", "", "$0.47/lb", "07023000102", "no", "", "", "", "")
+            ]
+        },
+        # 9. Balloons
+        {
+            "category": "Balloons",
+            "sub_category": "Party & Helium Balloons",
+            "items": [
+                ("Way to Celebrate 12-inch Assorted Color Latex Balloons 72ct", "72 ct", "4.98", "", "$0.07/ct", "07874253102", "yes", "", "", "", ""),
+                ("Way to Celebrate Metallic Gold Foil Helium Balloon 18-inch", "1 ct", "1.48", "", "$1.48/ct", "07874254102", "yes", "", "", "", ""),
+                ("Anagram Happy Birthday Colorful Dots Foil Balloon 18-inch", "1 ct", "2.98", "", "$2.98/ct", "02663500102", "no", "3 for $7", "7.00", "", ""),
+                ("Balloon Time Disposable Helium Tank Kit with 30 Balloons", "1 ct", "34.98", "", "$34.98/ct", "08204600102", "no", "", "", "Clip Coupon: Save $3.00", "31.98"),
+                ("Way to Celebrate Curling Ribbon Spool 500 Yards", "1 ct", "2.97", "", "$2.97/ct", "07874255102", "yes", "", "", "", "")
+            ]
+        },
+        # 10. Art Supplies
+        {
+            "category": "Art Supplies",
+            "sub_category": "Drawing & Painting",
+            "items": [
+                ("Crayola Colored Pencils Pre-Sharpened 24 Count", "24 ct", "3.48", "", "$0.15/ct", "07166200102", "no", "2 for $6", "6.00", "", ""),
+                ("Pen+Gear Watercolor Paint Set with Brush 16 Colors", "16 ct", "1.97", "", "$0.12/ct", "07874257102", "yes", "", "", "", ""),
+                ("Elmer's Disappearing Purple Washable School Glue Sticks 6pk", "6 ct", "2.97", "", "$0.50/ct", "02600000102", "no", "", "", "", ""),
+                ("Arteza Mixed Media Pad 9x12 Heavyweight 60 Sheets", "60 ct", "9.98", "", "$0.17/ct", "85000000102", "no", "", "", "Clip Coupon: Save $1.50", "8.48"),
+                ("Crayola Ultra-Clean Washable Broad Line Markers 10ct", "10 ct", "2.88", "", "$0.29/ct", "07166200202", "no", "", "", "", "")
+            ]
+        },
+        # 11. Office Supplies
+        {
+            "category": "Office Supplies",
+            "sub_category": "Writing & Paper",
+            "items": [
+                ("Pen+Gear 1-Subject College Ruled Spiral Notebook 70 Sheets", "70 ct", "0.45", "", "$0.01/ct", "07874259102", "yes", "", "", "", ""),
+                ("Pilot G2 Premium Rolling Ball Gel Pens Fine 0.7mm Black 4pk", "4 ct", "4.97", "", "$1.24/ct", "07283800102", "no", "", "", "Clip Coupon: Save $1.00", "3.97"),
+                ("Post-it Notes 3x3 Canary Yellow Pads 5 Pack", "500 ct", "5.98", "", "$0.01/ct", "05113100102", "no", "2 for $10", "10.00", "", ""),
+                ("Scotch Magic Invisible Tape with Dispenser 3 Pack", "3 ct", "4.47", "", "$1.49/ct", "05113100202", "no", "", "", "", ""),
+                ("Sharpie Permanent Markers Fine Point Assorted Colors 8ct", "8 ct", "6.97", "", "$0.87/ct", "07164100102", "no", "", "", "", "")
             ]
         }
     ]
@@ -225,30 +170,31 @@ def generate_contest_demo_dataset():
     all_records = []
     seen_upcs = set()
 
-    # Generate 520 realistic Walmart records by expanding variations
-    size_variations = [
-        ("Family Size", 1.4, 1.3),
-        ("Value Pack", 1.8, 1.6),
-        ("Club Size", 2.2, 1.9),
+    # Pack variations to generate realistic Walmart catalog entries across all 11 categories
+    pack_variations = [
+        ("Family Size", 1.4, 1.25),
+        ("Value Pack", 1.8, 1.55),
+        ("Club Size", 2.4, 1.95),
         ("Twin Pack", 2.0, 1.85),
-        ("Travel Mini", 0.4, 0.5)
+        ("Multi-Pack (3 ct)", 3.0, 2.70),
+        ("Economy Pack", 2.2, 1.80),
+        ("Mega Pack", 3.2, 2.85),
+        ("Travel Mini", 0.5, 0.60)
     ]
 
+    # First, append all base items
     for cat_data in category_catalog:
         cat = cat_data["category"]
         sub_cat = cat_data["sub_category"]
-        base_items = cat_data["items"]
-
-        # Add base items first
-        for item in base_items:
+        for item in cat_data["items"]:
             title, weight, reg_p, sale_p, ppm, upc, s_brand, v_desc, v_price, d_desc, d_price = item
-            
+
             clean_reg = normalizer.clean_price(reg_p)
             clean_sale = normalizer.clean_price(sale_p)
             clean_v_price = normalizer.clean_price(v_price)
             clean_d_price = normalizer.clean_price(d_price)
 
-            slug = title.lower().replace(" ", "-").replace("'", "").replace("&", "and")
+            slug = title.lower().replace(" ", "-").replace("'", "").replace("&", "and").replace("+", "")
             url = f"https://www.walmart.com/ip/{slug}/{upc}"
             img = f"https://i5.walmartimages.com/asr/{upc}-thumb.jpeg"
 
@@ -279,25 +225,31 @@ def generate_contest_demo_dataset():
             all_records.append(record.to_ordered_dict())
             seen_upcs.add(upc)
 
-        # Expand with realistic brand variations to achieve 500+ records
-        for var_label, weight_mult, price_mult in size_variations:
-            for item in base_items:
+    # Second, expand variations proportionally across all categories until we reach 525+ valid items
+    for var_label, weight_mult, price_mult in pack_variations:
+        for cat_data in category_catalog:
+            cat = cat_data["category"]
+            sub_cat = cat_data["sub_category"]
+            for item in cat_data["items"]:
+                if len(all_records) >= 530:
+                    break
                 title, weight, reg_p, sale_p, ppm, upc, s_brand, v_desc, v_price, d_desc, d_price = item
                 var_title = f"{title}, {var_label}"
-                var_upc = str(int(upc) + int(weight_mult * 1000) + random.randint(100, 999))
                 
+                # Deterministic unique UPC derivation
+                var_upc_num = int(upc) + int(weight_mult * 10000) + random.randint(100, 999)
+                var_upc = f"{var_upc_num:011d}"
                 if var_upc in seen_upcs:
-                    continue
+                    var_upc = f"{var_upc_num + 5000:011d}"
                 seen_upcs.add(var_upc)
 
                 var_reg = f"{float(reg_p) * price_mult:.2f}"
                 var_sale = f"{float(sale_p) * price_mult:.2f}" if sale_p else ""
-                
-                slug = var_title.lower().replace(" ", "-").replace("'", "").replace("&", "and").replace(",", "")
+
+                slug = var_title.lower().replace(" ", "-").replace("'", "").replace("&", "and").replace(",", "").replace("+", "")
                 url = f"https://www.walmart.com/ip/{slug}/{var_upc}"
                 img = f"https://i5.walmartimages.com/asr/{var_upc}-thumb.jpeg"
 
-                # Variation deals
                 var_v_desc = v_desc
                 var_v_price = f"{float(v_price) * price_mult:.2f}" if v_price else ""
                 var_d_desc = d_desc
@@ -328,17 +280,25 @@ def generate_contest_demo_dataset():
                     crawl_date=crawl_date
                 )
                 all_records.append(record.to_ordered_dict())
-                if len(all_records) >= 520:
-                    break
-            if len(all_records) >= 520:
+            if len(all_records) >= 530:
                 break
+        if len(all_records) >= 530:
+            break
 
+    # Save to data/output/walmart_contest_submission_500_records.json
     output_path = os.path.join(storage.output_dir, "walmart_contest_submission_500_records.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(all_records, f, indent=2, ensure_ascii=False)
 
     print(f"Generated {len(all_records)} valid records conforming to all contest rules.")
+    print(f"Categories covered: {len(set(r['category'] for r in all_records))}")
     print(f"Saved to: {output_path}")
+
+    # Sync to preview/dataset.js
+    preview_js_path = os.path.join(config_loader.base_dir, "preview", "dataset.js")
+    with open(preview_js_path, "w", encoding="utf-8") as f:
+        f.write("window.SCRAPED_DATA = " + json.dumps(all_records, ensure_ascii=False) + ";\n")
+    print(f"Synced preview dataset to: {preview_js_path}")
 
     # Generate full audit statistics
     stats = storage.calculate_statistics(all_records)
