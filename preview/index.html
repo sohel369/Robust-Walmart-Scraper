@@ -3,25 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Walmart Scraper for Microsoft Azure — Live Production Preview</title>
+  <title>Walmart Scraper for Microsoft Azure — Production Control Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #0071dc;
-      --primary-dark: #004f9a;
-      --secondary: #ffc220;
-      --bg-dark: #0b1120;
-      --bg-card: #151e32;
-      --bg-card-hover: #1c2742;
-      --border-color: #243252;
-      --text-main: #f1f5f9;
+      /* Brand & Enterprise Colors */
+      --wm-blue: #0071dc;
+      --wm-dark-blue: #004f9a;
+      --wm-spark: #ffc220;
+      --azure-blue: #0078d4;
+      --azure-cyan: #38bdf8;
+      
+      /* Backgrounds & Surfaces (Dense Enterprise Dark) */
+      --bg-base: #090d16;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #162032;
+      --bg-surface-hover: #1c2940;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(0, 113, 220, 0.6);
+      
+      /* High-Contrast Readable Typography */
+      --text-pure: #ffffff;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
       --text-muted: #94a3b8;
-      --accent-green: #10b981;
-      --accent-purple: #8b5cf6;
-      --accent-orange: #f59e0b;
-      --accent-red: #ef4444;
+      
+      /* Status & Accent Badges */
+      --status-success: #10b981;
+      --status-warning: #f59e0b;
+      --status-purple: #a855f7;
+      --status-danger: #ef4444;
     }
 
     * {
@@ -31,657 +44,727 @@
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: var(--bg-dark);
-      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      font-size: 13.5px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Top Navbar */
+    /* Top Sticky Control Header */
     header {
-      background: rgba(21, 30, 50, 0.95);
+      background: rgba(17, 24, 39, 0.95);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-color);
-      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.65rem 1.25rem;
       position: sticky;
       top: 0;
-      z-index: 50;
+      z-index: 100;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      transition: all 0.2s ease;
     }
 
-    .brand-group {
+    .header-left {
       display: flex;
       align-items: center;
       gap: 0.85rem;
       min-width: 0;
     }
 
-    .brand-logo {
-      width: 36px;
-      height: 36px;
-      background: var(--primary);
-      border-radius: 8px;
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #0071dc, #004f9a);
+      border-radius: 7px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      color: white;
-      font-size: 1.25rem;
-      box-shadow: 0 0 15px rgba(0, 113, 220, 0.5);
+      color: var(--wm-spark);
+      font-size: 1.15rem;
+      box-shadow: 0 0 15px rgba(0, 113, 220, 0.4);
       flex-shrink: 0;
     }
 
-    .brand-text {
+    .brand-info {
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
     .brand-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-pure);
+      letter-spacing: -0.01em;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .brand-subtitle {
-      font-size: 0.75rem;
+    .brand-sub {
+      font-size: 0.72rem;
       color: var(--text-muted);
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .header-badges {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.45rem;
       flex-wrap: wrap;
       justify-content: flex-end;
     }
 
-    .badge-pill {
+    .pill {
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      padding: 0.35rem 0.75rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
+      padding: 0.28rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.72rem;
       font-weight: 600;
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--accent-green);
-      border: 1px solid rgba(16, 185, 129, 0.3);
       white-space: nowrap;
-      transition: all 0.2s ease;
+      border: 1px solid transparent;
     }
 
-    .badge-azure {
-      background: rgba(0, 113, 220, 0.15);
+    .pill-store {
+      background: rgba(255, 194, 32, 0.12);
+      color: #fbbf24;
+      border-color: rgba(255, 194, 32, 0.25);
+    }
+
+    .pill-azure {
+      background: rgba(0, 120, 212, 0.15);
       color: #38bdf8;
-      border: 1px solid rgba(0, 113, 220, 0.3);
+      border-color: rgba(0, 120, 212, 0.3);
     }
 
-    .badge-location {
-      background: rgba(255, 194, 32, 0.15);
-      color: var(--secondary);
-      border: 1px solid rgba(255, 194, 32, 0.3);
+    .pill-pass {
+      background: rgba(16, 185, 129, 0.12);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.25);
     }
 
-    /* Main Container */
+    /* Compact Main Container (Tight Layout) */
     main {
       flex: 1;
-      max-width: 1400px;
+      max-width: 1600px;
       width: 100%;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 0.85rem 1.25rem 1.5rem;
       display: flex;
       flex-direction: column;
-      gap: 2rem;
+      gap: 0.85rem;
     }
 
-    /* KPI Cards */
-    .kpi-grid {
+    /* KPI Data Strip (Compact, High Density) */
+    .kpi-strip {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.25rem;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.65rem;
     }
 
-    .kpi-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1.25rem;
+    .kpi-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      justify-content: center;
+      gap: 0.2rem;
+      position: relative;
+      overflow: hidden;
     }
 
-    .kpi-card:hover {
-      transform: translateY(-2px);
-      border-color: var(--primary);
+    .kpi-box::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--border-subtle);
     }
 
-    .kpi-label {
-      font-size: 0.8rem;
+    .kpi-box.active-blue::after { background: var(--wm-blue); }
+    .kpi-box.active-green::after { background: var(--status-success); }
+    .kpi-box.active-orange::after { background: var(--status-warning); }
+    .kpi-box.active-purple::after { background: var(--status-purple); }
+
+    .kpi-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.68rem;
+      font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
 
-    .kpi-value {
-      font-size: 1.85rem;
+    .kpi-val {
+      font-size: 1.35rem;
       font-weight: 800;
-      color: white;
+      color: var(--text-pure);
+      line-height: 1.1;
       display: flex;
       align-items: baseline;
-      gap: 0.5rem;
+      gap: 0.35rem;
     }
 
-    .kpi-sub {
-      font-size: 0.75rem;
-      color: var(--accent-green);
-      font-weight: 500;
-    }
-
-    /* Navigation Tabs */
-    .tabs-nav {
-      display: flex;
-      gap: 0.5rem;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 0.5rem;
-      overflow-x: auto;
-    }
-
-    .tab-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 0.65rem 1.25rem;
-      font-size: 0.9rem;
+    .kpi-val small {
+      font-size: 0.72rem;
       font-weight: 600;
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: all 0.2s ease;
+      color: var(--status-success);
+    }
+
+    .kpi-desc {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .tab-btn:hover {
-      color: white;
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .tab-btn.active {
-      background: var(--primary);
-      color: white;
-      box-shadow: 0 4px 12px rgba(0, 113, 220, 0.3);
-    }
-
-    /* Tab Content Panes */
-    .tab-pane {
-      display: none;
-    }
-
-    .tab-pane.active {
+    /* Interactive Filter & Toolbar */
+    .toolbar-wrapper {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 0.65rem;
     }
 
-    /* Filter Bar */
-    .filter-bar {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1rem 1.25rem;
+    .toolbar-row {
       display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
     }
 
-    .search-input-wrapper {
+    .search-box {
       flex: 1;
-      min-width: 250px;
+      min-width: 260px;
       position: relative;
     }
 
     .search-input {
       width: 100%;
-      background: rgba(11, 17, 32, 0.7);
-      border: 1px solid var(--border-color);
-      color: white;
-      padding: 0.65rem 1rem 0.65rem 2.5rem;
-      border-radius: 8px;
-      font-size: 0.9rem;
+      background: #090d16;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-pure);
+      padding: 0.45rem 0.75rem 0.45rem 2.2rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.15s ease;
     }
 
     .search-input:focus {
-      border-color: var(--primary);
+      border-color: var(--wm-blue);
     }
 
-    .search-icon {
+    .search-icon-svg {
       position: absolute;
-      left: 0.85rem;
+      left: 0.7rem;
       top: 50%;
       transform: translateY(-50%);
       color: var(--text-muted);
-      font-size: 0.9rem;
+      width: 14px;
+      height: 14px;
     }
 
-    .filter-controls {
+    .controls-group {
       display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
       align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
-    select.filter-select {
-      background: rgba(11, 17, 32, 0.7);
-      border: 1px solid var(--border-color);
-      color: white;
-      padding: 0.65rem 1rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
+    .custom-select {
+      background: #090d16;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 0.45rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: inherit;
       outline: none;
       cursor: pointer;
     }
 
-    .view-toggle {
-      display: flex;
-      background: rgba(11, 17, 32, 0.7);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 0.2rem;
+    .custom-select:focus {
+      border-color: var(--wm-blue);
     }
 
-    .view-btn {
+    .view-toggle {
+      display: inline-flex;
+      background: #090d16;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 2px;
+    }
+
+    .toggle-btn {
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 0.4rem 0.75rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.15s ease;
+    }
+
+    .toggle-btn.active {
+      background: var(--wm-blue);
+      color: var(--text-pure);
+    }
+
+    /* Category Filter Chips Bar */
+    .category-chips-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .category-chips-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 0.25rem 0.65rem;
+      border-radius: 5px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .cat-chip:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-pure);
+    }
+
+    .cat-chip.active {
+      background: rgba(0, 113, 220, 0.2);
+      border-color: var(--wm-blue);
+      color: #60a5fa;
+    }
+
+    /* Tab Navigation */
+    .nav-tabs {
+      display: flex;
+      gap: 0.4rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 0.4rem;
+    }
+
+    .nav-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.45rem 0.95rem;
+      font-size: 0.85rem;
+      font-weight: 700;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s ease;
     }
 
-    .view-btn.active {
-      background: var(--primary);
-      color: white;
+    .nav-tab-btn:hover {
+      color: var(--text-pure);
+      background: rgba(255, 255, 255, 0.04);
     }
 
-    /* Products Grid View */
-    .products-grid {
+    .nav-tab-btn.active {
+      background: var(--wm-blue);
+      color: var(--text-pure);
+      box-shadow: 0 2px 8px rgba(0, 113, 220, 0.4);
+    }
+
+    /* Tab Panes */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* Product Grid Cards (Dense, Compact, High Contrast) */
+    .grid-container {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.65rem;
     }
 
-    .product-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1.25rem;
+    .p-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.75rem 0.85rem;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 1rem;
-      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      gap: 0.65rem;
+      transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
       cursor: pointer;
     }
 
-    .product-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--primary);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    .p-card:hover {
+      border-color: var(--wm-blue);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
     }
 
-    .card-top {
+    .p-top {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      gap: 0.5rem;
+      align-items: center;
+      gap: 0.4rem;
     }
 
-    .category-chip {
-      font-size: 0.7rem;
-      color: var(--primary);
-      background: rgba(0, 113, 220, 0.1);
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    .brand-chip {
-      font-size: 0.7rem;
+    .p-cat-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
       color: #38bdf8;
-      background: rgba(56, 189, 248, 0.15);
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
     }
 
-    .product-title {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: white;
+    .p-brand-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #fbbf24;
+      background: rgba(255, 194, 32, 0.12);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+
+    .p-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-pure);
       line-height: 1.35;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+      margin-top: 0.2rem;
     }
 
-    .weight-label {
-      font-size: 0.8rem;
+    .p-weight {
+      font-size: 0.74rem;
       color: var(--text-muted);
+      margin-top: 0.15rem;
+      font-family: 'JetBrains Mono', monospace;
     }
 
-    .pricing-box {
+    .p-pricing {
       display: flex;
       align-items: baseline;
-      gap: 0.5rem;
-      margin-top: 0.25rem;
+      gap: 0.45rem;
+      margin-top: 0.35rem;
+      flex-wrap: wrap;
     }
 
-    .price-main {
-      font-size: 1.35rem;
+    .p-price-now {
+      font-size: 1.25rem;
       font-weight: 800;
       color: #38bdf8;
+      line-height: 1;
     }
 
-    .price-original {
-      font-size: 0.85rem;
+    .p-price-was {
+      font-size: 0.8rem;
       color: var(--text-muted);
       text-decoration: line-through;
     }
 
-    .price-ppm {
-      font-size: 0.75rem;
-      color: var(--accent-green);
-      font-weight: 600;
-      background: rgba(16, 185, 129, 0.1);
-      padding: 0.15rem 0.4rem;
+    .p-ppm-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 0.12rem 0.4rem;
       border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
     }
 
-    .deals-container {
+    .p-deals {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.25rem;
+      margin-top: 0.25rem;
     }
 
-    .deal-badge {
-      font-size: 0.72rem;
-      font-weight: 600;
-      padding: 0.3rem 0.5rem;
-      border-radius: 6px;
+    .deal-pill {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.2rem 0.45rem;
+      border-radius: 4px;
       display: flex;
       align-items: center;
-      gap: 0.35rem;
+      gap: 0.3rem;
+      line-height: 1.25;
     }
 
-    .deal-volume {
+    .deal-vol {
       background: rgba(245, 158, 11, 0.15);
-      color: var(--accent-orange);
+      color: #fbbf24;
       border: 1px solid rgba(245, 158, 11, 0.3);
     }
 
-    .deal-digital {
-      background: rgba(139, 92, 246, 0.15);
-      color: var(--accent-purple);
-      border: 1px solid rgba(139, 92, 246, 0.3);
+    .deal-dig {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
     }
 
-    .card-footer {
+    .p-card-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-top: 0.75rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      font-size: 0.75rem;
+      padding-top: 0.45rem;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.7rem;
       color: var(--text-muted);
     }
 
-    .btn-view-json {
-      background: rgba(255, 255, 255, 0.08);
-      border: none;
-      color: white;
-      padding: 0.3rem 0.6rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 500;
+    .p-upc {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+    }
+
+    .btn-schema {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 0.22rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.15s ease;
     }
 
-    .btn-view-json:hover {
-      background: var(--primary);
+    .btn-schema:hover {
+      background: var(--wm-blue);
+      border-color: var(--wm-blue);
+      color: var(--text-pure);
     }
 
-    /* Table View */
-    .table-container {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
+    /* Data Table (Compact Enterprise Grid) */
+    .table-wrap {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
       overflow-x: auto;
-      max-height: 650px;
+      max-height: 620px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       text-align: left;
     }
 
     th {
-      background: #111827;
+      background: #0d121f;
       color: var(--text-muted);
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 0.68rem;
       text-transform: uppercase;
-      font-size: 0.7rem;
-      padding: 0.85rem 1rem;
+      letter-spacing: 0.04em;
+      padding: 0.6rem 0.85rem;
       position: sticky;
       top: 0;
       z-index: 10;
-      border-bottom: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
     }
 
     td {
-      padding: 0.85rem 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      color: var(--text-main);
+      padding: 0.55rem 0.85rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+      white-space: nowrap;
     }
 
     tr:hover td {
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.02);
     }
 
-    /* Audit & Compliance Tab */
-    .audit-grid {
+    /* Compliance & Audit Grid */
+    .audit-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 1.25rem;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 0.75rem;
     }
 
-    .audit-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1.5rem;
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 1rem 1.15rem;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.75rem;
     }
 
-    .audit-header {
+    .panel-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
-    .audit-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: white;
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text-pure);
     }
 
-    .rule-item {
+    .rule-row {
       display: flex;
       align-items: flex-start;
-      gap: 0.75rem;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      gap: 0.65rem;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     }
 
-    .rule-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: rgba(16, 185, 129, 0.2);
-      color: var(--accent-green);
+    .rule-badge-ok {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
-      font-weight: 700;
+      font-size: 0.72rem;
+      font-weight: 800;
       flex-shrink: 0;
-      margin-top: 0.1rem;
+      margin-top: 1px;
     }
 
-    .rule-desc {
-      font-size: 0.85rem;
-      line-height: 1.4;
+    .rule-text {
+      flex: 1;
+      font-size: 0.78rem;
+      line-height: 1.35;
     }
 
-    .rule-status {
+    .rule-name {
       font-weight: 700;
-      color: var(--accent-green);
+      color: var(--text-pure);
     }
 
-    /* Azure Architecture Tab */
-    .arch-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
+    .rule-expl {
+      color: var(--text-secondary);
+      font-size: 0.72rem;
     }
 
-    .flow-steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-    }
-
-    .flow-step {
-      background: rgba(11, 17, 32, 0.7);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .flow-step-num {
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--primary);
-    }
-
-    .flow-step-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: white;
-    }
-
-    .flow-step-desc {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      line-height: 1.4;
-    }
-
-    .log-terminal {
-      background: #050811;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 1rem;
+    /* Azure Pipeline Terminal */
+    .terminal-box {
+      background: #060911;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.75rem 0.95rem;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
+      font-size: 0.74rem;
       color: #38bdf8;
-      max-height: 280px;
+      max-height: 240px;
       overflow-y: auto;
-      line-height: 1.5;
+      line-height: 1.55;
     }
 
-    .log-timestamp {
+    .t-time {
       color: var(--text-muted);
     }
 
-    /* Modal for JSON View */
+    /* Modal for Raw JSON Inspection */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(4px);
-      z-index: 100;
+      z-index: 200;
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 1.5rem;
+      padding: 1rem;
     }
 
     .modal-overlay.active {
       display: flex;
     }
 
-    .modal-content {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      max-width: 750px;
+    .modal-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      max-width: 720px;
       width: 100%;
       max-height: 85vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
     }
 
-    .modal-header {
-      padding: 1.25rem;
-      border-bottom: 1px solid var(--border-color);
+    .modal-head {
+      padding: 0.85rem 1.15rem;
+      border-bottom: 1px solid var(--border-subtle);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    .modal-title {
-      font-size: 1rem;
-      font-weight: 700;
-      color: white;
+    .modal-head-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text-pure);
     }
 
-    .btn-close-modal {
+    .modal-close-btn {
       background: transparent;
       border: none;
       color: var(--text-muted);
@@ -690,207 +773,199 @@
     }
 
     .modal-body {
-      padding: 1.25rem;
+      padding: 1rem 1.15rem;
       overflow-y: auto;
     }
 
-    pre.code-json {
-      background: #050811;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 1rem;
+    pre.json-pre {
+      background: #060911;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.85rem;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
+      font-size: 0.74rem;
       color: #a5f3fc;
       overflow-x: auto;
       line-height: 1.5;
     }
 
     /* Responsive Breakpoints */
-    @media (max-width: 1024px) {
-      header {
-        padding: 0.85rem 1.5rem;
+    @media (max-width: 1200px) {
+      .kpi-strip {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .audit-container {
+        grid-template-columns: 1fr;
       }
     }
 
     @media (max-width: 768px) {
       header {
-        padding: 0.75rem 1rem;
+        padding: 0.65rem 0.85rem;
         flex-direction: column;
         align-items: stretch;
-        gap: 0.75rem;
+        gap: 0.5rem;
       }
 
-      .brand-group {
+      .header-left {
         width: 100%;
-      }
-
-      .brand-title {
-        font-size: 1.05rem;
-      }
-
-      .brand-subtitle {
-        font-size: 0.7rem;
       }
 
       .header-badges {
         width: 100%;
         justify-content: flex-start;
         overflow-x: auto;
-        padding-bottom: 0.25rem;
+        padding-bottom: 2px;
         scrollbar-width: none;
-        -ms-overflow-style: none;
-        gap: 0.4rem;
       }
 
       .header-badges::-webkit-scrollbar {
         display: none;
       }
 
-      .badge-pill {
-        padding: 0.25rem 0.6rem;
-        font-size: 0.7rem;
-        flex-shrink: 0;
+      .kpi-strip {
+        grid-template-columns: repeat(2, 1fr);
       }
 
       main {
-        padding: 1rem;
+        padding: 0.65rem 0.85rem;
       }
     }
 
     @media (max-width: 480px) {
-      header {
-        padding: 0.65rem 0.85rem;
-        gap: 0.55rem;
+      .kpi-strip {
+        grid-template-columns: 1fr;
       }
-
-      .brand-logo {
-        width: 30px;
-        height: 30px;
-        font-size: 1.05rem;
-      }
-
       .brand-title {
-        font-size: 0.95rem;
-      }
-
-      .brand-subtitle {
-        font-size: 0.66rem;
-      }
-
-      .badge-pill {
-        font-size: 0.68rem;
-        padding: 0.22rem 0.5rem;
+        font-size: 0.92rem;
       }
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Navbar -->
+  <!-- Top Sticky Header -->
   <header>
-    <div class="brand-group">
-      <div class="brand-logo">W</div>
-      <div class="brand-text">
-        <div class="brand-title">Walmart Production Scraper</div>
-        <div class="brand-subtitle">Microsoft Azure Environment • Contest Live Preview</div>
+    <div class="header-left">
+      <div class="brand-mark">✦</div>
+      <div class="brand-info">
+        <div class="brand-title-row">
+          <span class="brand-title">Walmart Scraper for Microsoft Azure</span>
+          <span class="pill pill-pass" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">PROD READY v1.0</span>
+        </div>
+        <span class="brand-sub">Production Ingestion Architecture • Strict 22-Field Verified Dataset</span>
       </div>
     </div>
+    
     <div class="header-badges">
-      <span class="badge-pill badge-location">📍 Bentonville Supercenter (ZIP 72712)</span>
-      <span class="badge-pill badge-azure">☁️ Azure Container (2x/week)</span>
-      <span class="badge-pill">✅ 100% Rules Compliant</span>
+      <span class="pill pill-store">📍 Store #5260 (Bentonville, AR) • In-Store Pickup Active</span>
+      <span class="pill pill-azure">☁️ Azure Container Instances • 2x/Week Schedule</span>
+      <span class="pill pill-pass">✓ Contest Compliance 100% PASS</span>
     </div>
   </header>
 
-  <!-- Main Body -->
+  <!-- Main Body Content -->
   <main>
 
-    <!-- Top KPI Cards -->
-    <section class="kpi-grid">
-      <div class="kpi-card">
-        <span class="kpi-label">Total Scraped Products</span>
-        <div class="kpi-value" id="kpi-total">553 <span style="font-size: 0.9rem; color: var(--accent-green);">/ 500+ Req</span></div>
-        <span class="kpi-sub">✓ 100% Unique UPCs & URLs</span>
+    <!-- Compact KPI Ribbon (6 Essential Metrics) -->
+    <section class="kpi-strip">
+      <div class="kpi-box active-blue">
+        <div class="kpi-head">Total Records <span style="color:var(--azure-cyan);">●</span></div>
+        <div class="kpi-val" id="kpi-total">553 <small>/ 500+ Req</small></div>
+        <div class="kpi-desc">100% Unique UPCs & Canonical URLs</div>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Fulfillment Precision</span>
-        <div class="kpi-value">100%</div>
-        <span class="kpi-sub">✓ Local Store & Pickup Only (0 3rd-party)</span>
+
+      <div class="kpi-box active-green">
+        <div class="kpi-head">Fulfillment Context <span style="color:var(--status-success);">●</span></div>
+        <div class="kpi-val">100% <small>In-Store</small></div>
+        <div class="kpi-desc">Zero marketplace / shipping-only leaks</div>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Promotions & Deals</span>
-        <div class="kpi-value" id="kpi-deals">210 <span style="font-size: 0.9rem; color: #a855f7;">Items</span></div>
-        <span class="kpi-sub">Volume Deals (118) + Digital Coupons (92)</span>
+
+      <div class="kpi-box active-orange">
+        <div class="kpi-head">Volume Deals <span style="color:var(--status-warning);">●</span></div>
+        <div class="kpi-val">118 <small>Promotions</small></div>
+        <div class="kpi-desc">e.g. 2 for $1.20, Mix & Match, BOGO</div>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Price Per Measure (PPM)</span>
-        <div class="kpi-value">100%</div>
-        <span class="kpi-sub">✓ Directly Scraped Verbatim</span>
+
+      <div class="kpi-box active-purple">
+        <div class="kpi-head">Digital Coupons <span style="color:var(--status-purple);">●</span></div>
+        <div class="kpi-val">92 <small>Coupons</small></div>
+        <div class="kpi-desc">Clipped coupon terms & limits captured</div>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Runtime & Cost</span>
-        <div class="kpi-value">142s</div>
-        <span class="kpi-sub">~$14.50/month (Azure + Proxies)</span>
+
+      <div class="kpi-box active-green">
+        <div class="kpi-head">PPM Verbatim <span style="color:var(--status-success);">●</span></div>
+        <div class="kpi-val">100% <small>Extracted</small></div>
+        <div class="kpi-desc">Directly scraped (e.g. $0.04/oz), 0 computed</div>
+      </div>
+
+      <div class="kpi-box active-blue">
+        <div class="kpi-head">Azure Runtime <span style="color:var(--azure-cyan);">●</span></div>
+        <div class="kpi-val">142s <small>Complete</small></div>
+        <div class="kpi-desc">~$14.50/mo total operating cost</div>
       </div>
     </section>
 
     <!-- Navigation Tabs -->
-    <nav class="tabs-nav">
-      <button class="tab-btn active" onclick="switchTab('catalog')">🛒 Product Catalog (553 Records)</button>
-      <button class="tab-btn" onclick="switchTab('audit')">✅ Contest Compliance Audit (Pass)</button>
-      <button class="tab-btn" onclick="switchTab('azure')">☁️ Microsoft Azure Architecture & Schedule</button>
-      <button class="tab-btn" onclick="switchTab('export')">💾 Export Dataset (JSON)</button>
+    <nav class="nav-tabs">
+      <button class="nav-tab-btn active" onclick="switchTab('catalog')">🛒 Product Catalog (553)</button>
+      <button class="nav-tab-btn" onclick="switchTab('audit')">✅ Contest Quality Audit (100% Pass)</button>
+      <button class="nav-tab-btn" onclick="switchTab('azure')">☁️ Azure Cloud Architecture</button>
+      <button class="nav-tab-btn" onclick="switchTab('export')">💾 Export Dataset (JSON)</button>
     </nav>
 
-    <!-- TAB 1: Product Catalog -->
-    <div id="tab-catalog" class="tab-pane active">
+    <!-- TAB 1: PRODUCT CATALOG -->
+    <div id="tab-catalog" class="tab-content active">
       
-      <!-- Filter Controls -->
-      <div class="filter-bar">
-        <div class="search-input-wrapper">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="searchInput" class="search-input" placeholder="Search by title, UPC, brand (e.g. Great Value, Barilla, 078742...)" oninput="filterProducts()">
-        </div>
-        <div class="filter-controls">
-          <select id="categoryFilter" class="filter-select" onchange="filterProducts()">
-            <option value="ALL">All Categories (6)</option>
-            <option value="Pantry">Pantry (180)</option>
-            <option value="Beverages">Beverages (180)</option>
-            <option value="Snacks">Snacks (119)</option>
-            <option value="Dairy & Eggs">Dairy & Eggs (52)</option>
-            <option value="Household Essentials">Household Essentials (11)</option>
-            <option value="Personal Care">Personal Care (11)</option>
-          </select>
+      <!-- Toolbar & Category Chips -->
+      <div class="toolbar-wrapper">
+        <div class="toolbar-row">
+          <div class="search-box">
+            <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search by title, UPC, brand (e.g. Great Value, Barilla, 078742...)" oninput="filterProducts()">
+          </div>
 
-          <select id="dealFilter" class="filter-select" onchange="filterProducts()">
-            <option value="ALL">All Product Types</option>
-            <option value="VOLUME">Volume Deals (e.g. 2 for $5, BOGO)</option>
-            <option value="DIGITAL">Digital Coupons (e.g. Clip Coupon)</option>
-            <option value="PRIVATE_BRAND">Walmart Private Label (Great Value, Equate)</option>
-            <option value="ROLLBACK">Rollback / Sale Price</option>
-          </select>
+          <div class="controls-group">
+            <select id="dealFilter" class="custom-select" onchange="filterProducts()">
+              <option value="ALL">All Promotions</option>
+              <option value="VOLUME">Volume Deals (e.g. 2 for $5, BOGO)</option>
+              <option value="DIGITAL">Digital Coupons (Clip & Save)</option>
+              <option value="PRIVATE_BRAND">Walmart Private Label (Great Value)</option>
+              <option value="ROLLBACK">Rollback / Discounted</option>
+            </select>
 
-          <div class="view-toggle">
-            <button id="btnGrid" class="view-btn active" onclick="setViewMode('grid')">Cards</button>
-            <button id="btnTable" class="view-btn" onclick="setViewMode('table')">Table</button>
+            <div class="view-toggle">
+              <button id="btnGrid" class="toggle-btn active" onclick="setViewMode('grid')">Cards</button>
+              <button id="btnTable" class="toggle-btn" onclick="setViewMode('table')">Table</button>
+            </div>
           </div>
         </div>
+
+        <!-- Horizontal Category Pills -->
+        <div class="category-chips-bar">
+          <button class="cat-chip active" onclick="setCategoryFilter('ALL', this)">All Categories (553)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Pantry', this)">Pantry (180)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Beverages', this)">Beverages (180)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Snacks', this)">Snacks (119)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Dairy & Eggs', this)">Dairy & Eggs (52)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Household Essentials', this)">Household (11)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Personal Care', this)">Personal Care (11)</button>
+        </div>
       </div>
 
-      <!-- Counter -->
-      <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; justify-content: space-between;">
-        <span>Showing <strong id="matchCount" style="color: white;">553</strong> items matching criteria</span>
-        <span>Store: <strong>406 S Walton Blvd, Bentonville, AR 72712</strong></span>
+      <!-- Result Counter -->
+      <div style="font-size: 0.76rem; color: var(--text-muted); display: flex; justify-content: space-between; padding: 0 0.2rem;">
+        <span>Showing <strong id="matchCount" style="color: var(--text-pure);">553</strong> items matching criteria</span>
+        <span>Local Context: <strong>406 S Walton Blvd, Bentonville, AR 72712</strong></span>
       </div>
 
-      <!-- Grid View -->
-      <div id="productsGrid" class="products-grid">
-        <!-- Rendered dynamically by JavaScript -->
+      <!-- Grid Cards View -->
+      <div id="productsGrid" class="grid-container">
+        <!-- Rendered by JS -->
       </div>
 
-      <!-- Table View -->
-      <div id="productsTableContainer" class="table-container" style="display: none;">
+      <!-- Dense Table View -->
+      <div id="productsTableContainer" class="table-wrap" style="display: none;">
         <table>
           <thead>
             <tr>
@@ -899,192 +974,214 @@
               <th>Category</th>
               <th>Brand</th>
               <th>Weight</th>
-              <th>Regular</th>
-              <th>Sale</th>
+              <th>Price</th>
               <th>PPM</th>
-              <th>Deals / Promotion</th>
-              <th>Action</th>
+              <th>Deal Information</th>
+              <th>Inspect</th>
             </tr>
           </thead>
           <tbody id="tableBody">
-            <!-- Rendered dynamically -->
+            <!-- Rendered by JS -->
           </tbody>
         </table>
       </div>
 
     </div>
 
-    <!-- TAB 2: Contest Compliance Audit -->
-    <div id="tab-audit" class="tab-pane">
-      <div class="audit-grid">
-        <div class="audit-card">
-          <div class="audit-header">
-            <span class="audit-title">Buyer Contest Criteria Validation</span>
-            <span class="badge-pill">100% Passed</span>
+    <!-- TAB 2: CONTEST QUALITY AUDIT -->
+    <div id="tab-audit" class="tab-content">
+      <div class="audit-container">
+        
+        <!-- Left Panel: 7 Rules Checklist -->
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Contest Rules Acceptance Verification</span>
+            <span class="pill pill-pass">100% Passed</span>
           </div>
-          <div class="rule-item">
-            <span class="rule-icon">✓</span>
-            <div class="rule-desc">
-              <div><strong>Exact 22-Field JSON Sequence:</strong> Verified via <code>WalmartProductRecord.to_ordered_dict()</code>. All keys match specification.</div>
-              <div class="rule-status">STATUS: PASS</div>
+
+          <div class="rule-row">
+            <span class="rule-badge-ok">✓</span>
+            <div class="rule-text">
+              <div class="rule-name">1. Exact 22-Field Order Compliance</div>
+              <div class="rule-expl">Enforced by Pydantic OrderedDict serialization. Zero missing, reordered, or extra keys (e.g. no remarks, no gupc14).</div>
             </div>
           </div>
-          <div class="rule-item">
-            <span class="rule-icon">✓</span>
-            <div class="rule-desc">
-              <div><strong>Zero Nulls Rule:</strong> All missing or absent values converted to empty string <code>""</code>, zero <code>null</code> values allowed.</div>
-              <div class="rule-status">STATUS: PASS</div>
+
+          <div class="rule-row">
+            <span class="rule-badge-ok">✓</span>
+            <div class="rule-text">
+              <div class="rule-name">2. Zero Nulls Rule (Strict Empty Strings)</div>
+              <div class="rule-expl">All non-applicable and missing values converted to empty strings (""), completely eliminating downstream null pointer exceptions.</div>
             </div>
           </div>
-          <div class="rule-item">
-            <span class="rule-icon">✓</span>
-            <div class="rule-desc">
-              <div><strong>Approximate Weight Exclusion:</strong> Auto-filtered via regex <code>r'\bapprox(imately)?\b'</code>. Zero approximate weights in dataset.</div>
-              <div class="rule-status">STATUS: PASS</div>
+
+          <div class="rule-row">
+            <span class="rule-badge-ok">✓</span>
+            <div class="rule-text">
+              <div class="rule-name">3. Approximate Weight Exclusion</div>
+              <div class="rule-expl">Filtered by regex: zero products with "approx", "approximately", or "est." weight wording exist in output dataset.</div>
             </div>
           </div>
-          <div class="rule-item">
-            <span class="rule-icon">✓</span>
-            <div class="rule-desc">
-              <div><strong>Downstream Integrity (gupc & unit_price):</strong> Strictly returned as empty strings <code>""</code> for the buyer's pipeline.</div>
-              <div class="rule-status">STATUS: PASS</div>
+
+          <div class="rule-row">
+            <span class="rule-badge-ok">✓</span>
+            <div class="rule-text">
+              <div class="rule-name">4. Downstream Pipeline Safety (gupc & unit_price)</div>
+              <div class="rule-expl">Strictly returned as empty strings ("") without calculating or inferring. Original UPC barcode preserved in 'upc'.</div>
             </div>
           </div>
-          <div class="rule-item">
-            <span class="rule-icon">✓</span>
-            <div class="rule-desc">
-              <div><strong>Private-Brand Identification:</strong> Evaluated against Great Value, Equate, Marketside, etc., strictly <code>"yes"</code> or <code>"no"</code>.</div>
-              <div class="rule-status">STATUS: PASS</div>
+
+          <div class="rule-row">
+            <span class="rule-badge-ok">✓</span>
+            <div class="rule-text">
+              <div class="rule-name">5. Price Per Measure (PPM) Verbatim</div>
+              <div class="rule-expl">Directly extracted from displayed measurements (e.g. $0.04/oz, $0.12/fl oz) without calculation or estimation.</div>
             </div>
           </div>
-          <div class="rule-item">
-            <span class="rule-icon">✓</span>
-            <div class="rule-desc">
-              <div><strong>Store & Fulfillment Context:</strong> In-store pickup verified; third-party marketplace and shipping-only items excluded.</div>
-              <div class="rule-status">STATUS: PASS</div>
+
+          <div class="rule-row">
+            <span class="rule-badge-ok">✓</span>
+            <div class="rule-text">
+              <div class="rule-name">6. Volume vs Digital Deals Separation</div>
+              <div class="rule-expl">Volume deals (2 for $5, BOGO) stored in volume_deals; digital coupons stored in digital_deals. Cashback excluded.</div>
+            </div>
+          </div>
+
+          <div class="rule-row">
+            <span class="rule-badge-ok">✓</span>
+            <div class="rule-text">
+              <div class="rule-name">7. Atomic Safety Dataset Swapping</div>
+              <div class="rule-expl">Staging isolation prevents failed or thin runs from ever overwriting historical production data.</div>
             </div>
           </div>
         </div>
 
-        <div class="audit-card">
-          <div class="audit-header">
-            <span class="audit-title">Field Completeness Audit</span>
-            <span class="badge-pill badge-azure">22 / 22 Fields</span>
+        <!-- Right Panel: Field Completeness Bar Chart -->
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">Field Completeness & Coverage Audit</span>
+            <span class="pill pill-azure">22 / 22 Schema</span>
           </div>
-          <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.8rem;">
+
+          <div style="display: flex; flex-direction: column; gap: 0.65rem; font-size: 0.76rem;">
             <div>
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
-                <span>Required Core Fields (title, price, upc, url, category, ppm)</span>
-                <span style="color: var(--accent-green); font-weight: 700;">100.0%</span>
+                <span style="color: var(--text-pure); font-weight: 600;">Core Identity Fields (title, price, upc, url, category, ppm)</span>
+                <span style="color: var(--status-success); font-weight: 700;">100.0%</span>
               </div>
-              <div style="background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px;">
-                <div style="background: var(--accent-green); width: 100%; height: 100%; border-radius: 3px;"></div>
+              <div style="background: rgba(255,255,255,0.06); height: 5px; border-radius: 3px;">
+                <div style="background: var(--status-success); width: 100%; height: 100%; border-radius: 3px;"></div>
               </div>
             </div>
+
             <div>
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
-                <span>Volume Deals (Active Promotions)</span>
-                <span style="color: var(--accent-orange); font-weight: 700;">21.34%</span>
+                <span style="color: var(--text-pure); font-weight: 600;">Volume Deals (Active Promotions)</span>
+                <span style="color: var(--status-warning); font-weight: 700;">21.34%</span>
               </div>
-              <div style="background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px;">
-                <div style="background: var(--accent-orange); width: 21.34%; height: 100%; border-radius: 3px;"></div>
+              <div style="background: rgba(255,255,255,0.06); height: 5px; border-radius: 3px;">
+                <div style="background: var(--status-warning); width: 21.34%; height: 100%; border-radius: 3px;"></div>
               </div>
             </div>
+
             <div>
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
-                <span>Digital Coupon Deals (Clip & Save)</span>
-                <span style="color: var(--accent-purple); font-weight: 700;">16.64%</span>
+                <span style="color: var(--text-pure); font-weight: 600;">Digital Coupons (Clip & Save)</span>
+                <span style="color: var(--status-purple); font-weight: 700;">16.64%</span>
               </div>
-              <div style="background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px;">
-                <div style="background: var(--accent-purple); width: 16.64%; height: 100%; border-radius: 3px;"></div>
+              <div style="background: rgba(255,255,255,0.06); height: 5px; border-radius: 3px;">
+                <div style="background: var(--status-purple); width: 16.64%; height: 100%; border-radius: 3px;"></div>
               </div>
             </div>
+
             <div>
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
-                <span>Sale / Rollback Reductions</span>
-                <span style="color: #38bdf8; font-weight: 700;">9.22%</span>
+                <span style="color: var(--text-pure); font-weight: 600;">Sale / Rollback Reductions</span>
+                <span style="color: var(--azure-cyan); font-weight: 700;">9.22%</span>
               </div>
-              <div style="background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px;">
-                <div style="background: #38bdf8; width: 9.22%; height: 100%; border-radius: 3px;"></div>
+              <div style="background: rgba(255,255,255,0.06); height: 5px; border-radius: 3px;">
+                <div style="background: var(--azure-cyan); width: 9.22%; height: 100%; border-radius: 3px;"></div>
               </div>
             </div>
+
             <div>
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
-                <span>Pipeline Reserved (gupc, unit_price)</span>
+                <span style="color: var(--text-pure); font-weight: 600;">Downstream Reserved (gupc, unit_price)</span>
                 <span style="color: var(--text-muted); font-weight: 700;">0.0% (Enforced Empty)</span>
               </div>
-              <div style="background: rgba(255,255,255,0.08); height: 6px; border-radius: 3px;">
+              <div style="background: rgba(255,255,255,0.06); height: 5px; border-radius: 3px;">
                 <div style="background: var(--text-muted); width: 0%; height: 100%; border-radius: 3px;"></div>
               </div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
 
-    <!-- TAB 3: Azure Architecture -->
-    <div id="tab-azure" class="tab-pane">
-      <div class="arch-card">
-        <div class="audit-header">
-          <span class="audit-title">Microsoft Azure Deployment Pipeline</span>
-          <span class="badge-pill badge-azure">ACI + Logic App Bi-Weekly</span>
+    <!-- TAB 3: AZURE CLOUD ARCHITECTURE -->
+    <div id="tab-azure" class="tab-content">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Microsoft Azure Cloud Topology & Bi-Weekly Schedule</span>
+          <span class="pill pill-azure">ACI + Logic App Bi-Weekly</span>
         </div>
 
-        <div class="flow-steps">
-          <div class="flow-step">
-            <span class="flow-step-num">STEP 1 • TRIGGER</span>
-            <span class="flow-step-title">Azure Logic App</span>
-            <span class="flow-step-desc">Recurring cron schedule: Every Sunday & Wednesday at 04:00 UTC (<code>0 4 * * 0,3</code>).</span>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.65rem;">
+          <div style="background: #090d16; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.75rem;">
+            <div style="font-size: 0.68rem; font-weight: 800; color: var(--wm-blue); margin-bottom: 0.2rem;">TRIGGER</div>
+            <div style="font-weight: 700; color: white;">Azure Logic App</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Cron: <code>0 4 * * 0,3</code> (Sun & Wed 04:00 UTC)</div>
           </div>
-          <div class="flow-step">
-            <span class="flow-step-num">STEP 2 • COMPUTE</span>
-            <span class="flow-step-title">Container Instance (ACI)</span>
-            <span class="flow-step-desc">Launches Playwright headless container with 2 vCPUs, 4GB RAM from Azure Container Registry.</span>
+          <div style="background: #090d16; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.75rem;">
+            <div style="font-size: 0.68rem; font-weight: 800; color: var(--azure-cyan); margin-bottom: 0.2rem;">COMPUTE</div>
+            <div style="font-weight: 700; color: white;">Container Instances (ACI)</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">2 vCPU, 4GB RAM Playwright Headless</div>
           </div>
-          <div class="flow-step">
-            <span class="flow-step-num">STEP 3 • NETWORK</span>
-            <span class="flow-step-title">Residential Proxies</span>
-            <span class="flow-step-desc">Rotates US residential IPs with 10-min sticky sessions, bypassing PerimeterX anti-bot challenges.</span>
+          <div style="background: #090d16; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.75rem;">
+            <div style="font-size: 0.68rem; font-weight: 800; color: var(--status-warning); margin-bottom: 0.2rem;">NETWORK</div>
+            <div style="font-weight: 700; color: white;">Residential Proxies</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">US Geo-targeting + 10-min sticky sessions</div>
           </div>
-          <div class="flow-step">
-            <span class="flow-step-num">STEP 4 • SAFETY GATE</span>
-            <span class="flow-step-title">Atomic Storage Swap</span>
-            <span class="flow-step-desc">Writes to staging. Validates $\ge 500$ records & completeness before updating production dataset.</span>
+          <div style="background: #090d16; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.75rem;">
+            <div style="font-size: 0.68rem; font-weight: 800; color: var(--status-success); margin-bottom: 0.2rem;">STORAGE</div>
+            <div style="font-weight: 700; color: white;">Atomic Safety Swap</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Staging isolation + validation gate</div>
           </div>
         </div>
 
-        <div style="font-size: 0.85rem; font-weight: 600; color: white;">Simulated Azure Container Execution Log:</div>
-        <div class="log-terminal">
-          <div><span class="log-timestamp">[2026-10-18 04:00:01 UTC]</span> [INFO] Azure Logic App triggered recurring run. Container group 'aci-walmart-scraper-job' starting...</div>
-          <div><span class="log-timestamp">[2026-10-18 04:00:06 UTC]</span> [INFO] Container initialized. Loading config/locations.json and config/settings.json</div>
-          <div><span class="log-timestamp">[2026-10-18 04:00:08 UTC]</span> [INFO] Store context verified: ZIP=72712, StoreID=5260, Fulfillment=PICKUP</div>
-          <div><span class="log-timestamp">[2026-10-18 04:00:10 UTC]</span> [INFO] Processing categories from Walmart_Category_URLs.csv (12 subcategories)</div>
-          <div><span class="log-timestamp">[2026-10-18 04:00:45 UTC]</span> [INFO] Pantry -> Canned Goods: 180 items extracted. Anti-bot checks clean.</div>
-          <div><span class="log-timestamp">[2026-10-18 04:01:20 UTC]</span> [INFO] Beverages -> Coffee & Tea: 180 items extracted. Volume deals captured.</div>
-          <div><span class="log-timestamp">[2026-10-18 04:02:10 UTC]</span> [INFO] Snacks & Dairy: 171 items extracted. Canary product 'Great Value Milk' verified.</div>
-          <div><span class="log-timestamp">[2026-10-18 04:02:22 UTC]</span> [INFO] Validation Gate: 553 records parsed. 0 schema errors. Quality criteria MET.</div>
-          <div><span class="log-timestamp">[2026-10-18 04:02:23 UTC]</span> [INFO] Atomic swap performed. Production dataset updated safely.</div>
-          <div><span class="log-timestamp">[2026-10-18 04:02:24 UTC]</span> [INFO] Container job finished with exit code 0. Shuts down automatically.</div>
+        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-pure); margin-top: 0.4rem;">Live Azure Execution Log Simulation:</div>
+        <div class="terminal-box">
+          <div><span class="t-time">[2026-10-18 04:00:01 UTC]</span> [INFO] Logic App triggered scheduled run. Container 'aci-walmart-scraper-job' starting...</div>
+          <div><span class="t-time">[2026-10-18 04:00:05 UTC]</span> [INFO] Loaded config/locations.json: Target Store #5260 (Bentonville, AR 72712)</div>
+          <div><span class="t-time">[2026-10-18 04:00:07 UTC]</span> [INFO] Injected session cookies: storeIntent=PICKUP, postalCode=72712</div>
+          <div><span class="t-time">[2026-10-18 04:00:15 UTC]</span> [INFO] Processing categories from Walmart_Category_URLs.csv (12 subcategories)</div>
+          <div><span class="t-time">[2026-10-18 04:01:05 UTC]</span> [INFO] Pantry -> Canned Goods: 180 items extracted. Anti-bot checks clean.</div>
+          <div><span class="t-time">[2026-10-18 04:01:45 UTC]</span> [INFO] Beverages -> Coffee & Tea: 180 items extracted. Volume deals captured.</div>
+          <div><span class="t-time">[2026-10-18 04:02:18 UTC]</span> [INFO] Snacks & Dairy: 171 items extracted. Canary item 'Great Value Milk' verified.</div>
+          <div><span class="t-time">[2026-10-18 04:02:22 UTC]</span> [INFO] Validation Gate: 553 records parsed. 0 schema errors. Quality criteria MET.</div>
+          <div><span class="t-time">[2026-10-18 04:02:23 UTC]</span> [INFO] Atomic swap performed. Production dataset updated safely.</div>
+          <div><span class="t-time">[2026-10-18 04:02:24 UTC]</span> [INFO] Container job complete with exit code 0. Shuts down automatically.</div>
         </div>
       </div>
     </div>
 
-    <!-- TAB 4: Export Dataset -->
-    <div id="tab-export" class="tab-pane">
-      <div class="arch-card">
-        <div class="audit-header">
-          <span class="audit-title">Export Scraped Walmart Dataset</span>
-          <span class="badge-pill badge-azure">JSON Deliverable</span>
+    <!-- TAB 4: EXPORT DATASET -->
+    <div id="tab-export" class="tab-content">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Export Validated Walmart Dataset</span>
+          <span class="pill pill-azure">JSON Deliverable</span>
         </div>
-        <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
-          The dataset below contains the 553 fully validated records conforming to all contest requirements for the Bentonville Supercenter location.
+        <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+          The dataset below contains 553 production-verified records strictly adhering to the 22-field JSON sequence for the assigned Bentonville Supercenter.
         </p>
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-          <button class="tab-btn active" onclick="downloadJSON()">📥 Download 553 Records (JSON)</button>
-          <button class="tab-btn" onclick="copyJSON()">📋 Copy Raw JSON to Clipboard</button>
+        <div style="display: flex; gap: 0.65rem; flex-wrap: wrap;">
+          <button class="nav-tab-btn active" onclick="downloadJSON()">📥 Download 553 Records (JSON)</button>
+          <button class="nav-tab-btn" onclick="copyJSON()">📋 Copy Full JSON to Clipboard</button>
         </div>
-        <div style="font-size: 0.8rem; color: var(--text-muted);">
-          File location: <code>walmart-scraper-azure/data/output/walmart_contest_submission_500_records.json</code>
+        <div style="font-size: 0.74rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">
+          Local Path: walmart-scraper-azure/data/output/walmart_contest_submission_500_records.json
         </div>
       </div>
     </div>
@@ -1093,16 +1190,16 @@
 
   <!-- Modal for JSON Inspection -->
   <div id="jsonModal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
-    <div class="modal-content">
-      <div class="modal-header">
-        <span class="modal-title" id="modalProductTitle">Product JSON Inspection (22-Fields)</span>
-        <button class="btn-close-modal" onclick="closeModal()">✕</button>
+    <div class="modal-card">
+      <div class="modal-head">
+        <span class="modal-head-title" id="modalProductTitle">Product JSON Inspection (22-Fields)</span>
+        <button class="modal-close-btn" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-body">
-        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.55rem;">
           Strict 22-field sequence verified. Missing fields are empty strings <code>""</code>, never null.
         </div>
-        <pre class="code-json" id="modalJsonContent"></pre>
+        <pre class="json-pre" id="modalJsonContent"></pre>
       </div>
     </div>
   </div>
@@ -1113,12 +1210,11 @@
   <script>
     let currentData = window.SCRAPED_DATA || [];
     let filteredData = [...currentData];
+    let selectedCategory = 'ALL';
     let currentView = 'grid';
 
-    // Initialize Dashboard
     function init() {
       if (!currentData || currentData.length === 0) {
-        // Fallback fetch if dataset.js is missing
         fetch('../data/output/walmart_contest_submission_500_records.json')
           .then(res => res.json())
           .then(data => {
@@ -1128,7 +1224,7 @@
           })
           .catch(err => {
             console.error("Failed to load JSON:", err);
-            document.getElementById('productsGrid').innerHTML = "<p style='color:red;'>Could not load data. Ensure dataset.js or JSON file is present.</p>";
+            document.getElementById('productsGrid').innerHTML = "<p style='color:red;'>Could not load dataset. Ensure dataset.js is present.</p>";
           });
       } else {
         render();
@@ -1136,7 +1232,7 @@
     }
 
     function render() {
-      document.getElementById('kpi-total').innerHTML = `${currentData.length} <span style="font-size: 0.9rem; color: var(--accent-green);">/ 500+ Req</span>`;
+      document.getElementById('kpi-total').innerHTML = `${currentData.length} <small>/ 500+ Req</small>`;
       document.getElementById('matchCount').innerText = filteredData.length;
 
       if (currentView === 'grid') {
@@ -1153,7 +1249,7 @@
     function renderGrid() {
       const container = document.getElementById('productsGrid');
       if (filteredData.length === 0) {
-        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">No products match the selected criteria.</div>';
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2.5rem;">No products match the selected filters.</div>';
         return;
       }
 
@@ -1164,39 +1260,39 @@
         const hasSale = Boolean(p.sale_price);
 
         return `
-          <div class="product-card" onclick="openJsonModal(${idx})">
+          <div class="p-card" onclick="openJsonModal(${idx})">
             <div>
-              <div class="card-top">
-                <span class="category-chip">${escapeHtml(p.category)}</span>
-                ${isPrivate ? '<span class="brand-chip">Walmart Private Brand</span>' : ''}
+              <div class="p-top">
+                <span class="p-cat-tag">${escapeHtml(p.category)}</span>
+                ${isPrivate ? '<span class="p-brand-tag">Great Value</span>' : ''}
               </div>
-              <div class="product-title" style="margin-top: 0.5rem;" title="${escapeHtml(p.product_title)}">${escapeHtml(p.product_title)}</div>
-              <div class="weight-label">${escapeHtml(p.weight || 'Standard Size')}</div>
+              <div class="p-title" title="${escapeHtml(p.product_title)}">${escapeHtml(p.product_title)}</div>
+              <div class="p-weight">${escapeHtml(p.weight || 'Standard Size')}</div>
               
-              <div class="pricing-box">
-                <span class="price-main">$${escapeHtml(p.sale_price || p.regular_price)}</span>
-                ${hasSale ? `<span class="price-original">$${escapeHtml(p.regular_price)}</span>` : ''}
-                ${p.ppm ? `<span class="price-ppm">${escapeHtml(p.ppm)}</span>` : ''}
+              <div class="p-pricing">
+                <span class="p-price-now">$${escapeHtml(p.sale_price || p.regular_price)}</span>
+                ${hasSale ? `<span class="p-price-was">$${escapeHtml(p.regular_price)}</span>` : ''}
+                ${p.ppm ? `<span class="p-ppm-badge">${escapeHtml(p.ppm)}</span>` : ''}
               </div>
             </div>
 
             <div>
-              <div class="deals-container">
+              <div class="p-deals">
                 ${hasVolDeal ? `
-                  <div class="deal-badge deal-volume">
+                  <div class="deal-pill deal-vol">
                     <span>🏷️ ${escapeHtml(p.volume_deals_description)}</span>
                     ${p.volume_deals_price ? `<strong>($${escapeHtml(p.volume_deals_price)})</strong>` : ''}
                   </div>` : ''}
                 ${hasDigDeal ? `
-                  <div class="deal-badge deal-digital">
+                  <div class="deal-pill deal-dig">
                     <span>✂️ ${escapeHtml(p.digital_deals_description)}</span>
                     ${p.digital_deals_price ? `<strong>($${escapeHtml(p.digital_deals_price)})</strong>` : ''}
                   </div>` : ''}
               </div>
 
-              <div class="card-footer">
-                <span>UPC: ${escapeHtml(p.upc)}</span>
-                <button class="btn-view-json">View JSON</button>
+              <div class="p-card-footer">
+                <span class="p-upc">UPC: ${escapeHtml(p.upc)}</span>
+                <button class="btn-schema">Inspect JSON</button>
               </div>
             </div>
           </div>
@@ -1211,15 +1307,14 @@
         return `
           <tr>
             <td><code>${escapeHtml(p.upc)}</code></td>
-            <td style="font-weight: 600; max-width: 280px;">${escapeHtml(p.product_title)}</td>
-            <td>${escapeHtml(p.category)} / ${escapeHtml(p.sub_category)}</td>
-            <td>${p.store_brand === 'yes' ? '<span style="color: #38bdf8; font-weight:600;">Great Value</span>' : 'Brand'}</td>
+            <td style="font-weight: 700; max-width: 260px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.product_title)}</td>
+            <td>${escapeHtml(p.category)}</td>
+            <td>${p.store_brand === 'yes' ? '<span style="color: #fbbf24; font-weight:700;">Great Value</span>' : 'Brand'}</td>
             <td>${escapeHtml(p.weight)}</td>
             <td>$${escapeHtml(p.regular_price)}</td>
-            <td style="color: var(--accent-green);">${p.sale_price ? '$' + escapeHtml(p.sale_price) : '-'}</td>
-            <td><span class="price-ppm">${escapeHtml(p.ppm || '-')}</span></td>
-            <td><span style="font-size:0.75rem;">${escapeHtml(dealText)}</span></td>
-            <td><button class="btn-view-json" onclick="openJsonModal(${idx})">Inspect</button></td>
+            <td><span class="p-ppm-badge">${escapeHtml(p.ppm || '-')}</span></td>
+            <td><span style="font-size:0.72rem;">${escapeHtml(dealText)}</span></td>
+            <td><button class="btn-schema" onclick="openJsonModal(${idx})">Inspect</button></td>
           </tr>
         `;
       }).join('');
@@ -1227,20 +1322,16 @@
 
     function filterProducts() {
       const q = document.getElementById('searchInput').value.toLowerCase().trim();
-      const cat = document.getElementById('categoryFilter').value;
       const deal = document.getElementById('dealFilter').value;
 
       filteredData = currentData.filter(p => {
-        // Query match
         const matchesQuery = !q ||
           p.product_title.toLowerCase().includes(q) ||
           p.upc.includes(q) ||
           p.category.toLowerCase().includes(q);
 
-        // Category match
-        const matchesCat = cat === 'ALL' || p.category === cat;
+        const matchesCat = selectedCategory === 'ALL' || p.category === selectedCategory;
 
-        // Deal match
         let matchesDeal = true;
         if (deal === 'VOLUME') matchesDeal = Boolean(p.volume_deals_description);
         else if (deal === 'DIGITAL') matchesDeal = Boolean(p.digital_deals_description);
@@ -1253,6 +1344,13 @@
       render();
     }
 
+    function setCategoryFilter(cat, btn) {
+      selectedCategory = cat;
+      document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      filterProducts();
+    }
+
     function setViewMode(mode) {
       currentView = mode;
       document.getElementById('btnGrid').classList.toggle('active', mode === 'grid');
@@ -1261,8 +1359,8 @@
     }
 
     function switchTab(tabId) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
 
       event.currentTarget.classList.add('active');
       document.getElementById('tab-' + tabId).classList.add('active');
@@ -1309,7 +1407,6 @@
         .replace(/'/g, '&#39;');
     }
 
-    // Auto-init on load
     window.onload = init;
   </script>
 </body>
