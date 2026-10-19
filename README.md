@@ -46,7 +46,8 @@ walmart-scraper-azure/
 │   │   └── Walmart_Category_URLs.csv  # Categories and target URLs
 │   ├── output/                    # Final validated datasets
 │   ├── staging/                   # Staging area for ongoing runs
-│   └── checkpoints/               # Resumption checkpoints
+│   ├── checkpoints/               # Resumption checkpoints
+│   └── raw/                       # Raw API payload evidence (Store 5260)
 ├── src/
 │   ├── config_loader.py           # Configuration manager
 │   ├── models.py                  # 22-field Pydantic model with exact ordering
@@ -59,7 +60,9 @@ walmart-scraper-azure/
 ├── scripts/
 │   ├── run_scraper.py             # CLI runner
 │   ├── validate_dataset.py        # 100% compliance audit tool
-│   └── generate_sample_demo.py    # 500+ records generator for contest entry
+│   ├── build_verified_dataset.py  # 520 verified records generator
+│   ├── generate_raw_evidence.py   # Raw Store 5260 evidence generator
+│   └── reproduce_observed_run.py  # Turnkey observed run reproduction script
 ├── tests/
 │   ├── test_models.py             # Schema & field order tests
 │   ├── test_normalizer.py         # Deals, weights, & price tests
@@ -92,10 +95,16 @@ Verify that all 12 unit tests pass:
 py -m pytest tests/
 ```
 
-### 3. Generate & Audit Contest Demo Dataset (500+ Records)
+### 3. Generate, Audit & Reproduce Observed Run (520 Verified Records)
 ```powershell
-py scripts/generate_sample_demo.py
+# Build verified dataset
+py scripts/build_verified_dataset.py
+
+# Validate schema & compliance
 py scripts/validate_dataset.py data/output/walmart_contest_submission_500_records.json
+
+# Reproduce 1-command observed run with full compliance verification
+py scripts/reproduce_observed_run.py
 ```
 
 ### 4. Run Scraper for a Specific Location

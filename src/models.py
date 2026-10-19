@@ -57,6 +57,10 @@ class WalmartProductRecord(BaseModel):
         val = str(v).lower().strip()
         return "yes" if val in ["yes", "true", "1"] else "no"
 
+    @classmethod
+    def get_field_order(cls) -> list[str]:
+        return list(cls.model_fields.keys())
+
     def to_ordered_dict(self) -> OrderedDict:
         """
         Returns an OrderedDict guaranteeing the exact 22-field sequence
