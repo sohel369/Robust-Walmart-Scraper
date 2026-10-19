@@ -1070,7 +1070,7 @@
       <button class="nav-tab-btn active" onclick="switchTab('catalog')">
         <!-- Shopping Bag SVG -->
         <svg class="svg-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-        Product Catalog (530)
+        Product Catalog (520)
       </button>
 
       <button class="nav-tab-btn" onclick="switchTab('audit')">
@@ -1127,16 +1127,16 @@
 
         <!-- Horizontal Category Pills -->
         <div class="category-chips-bar" id="categoryChipsBar">
-          <button class="cat-chip active" onclick="setCategoryFilter('ALL', this)">All Categories (530)</button>
-          <button class="cat-chip" onclick="setCategoryFilter('Food', this)">Food (72)</button>
-          <button class="cat-chip" onclick="setCategoryFilter('Household Essentials', this)">Household (54)</button>
-          <button class="cat-chip" onclick="setCategoryFilter('Personal Care', this)">Personal Care (54)</button>
+          <button class="cat-chip active" onclick="setCategoryFilter('ALL', this)">All Categories (520)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Food', this)">Food (75)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Household Essentials', this)">Household (50)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Personal Care', this)">Personal Care (50)</button>
           <button class="cat-chip" onclick="setCategoryFilter('Beauty', this)">Beauty (45)</button>
           <button class="cat-chip" onclick="setCategoryFilter('Diapering', this)">Diapering (45)</button>
           <button class="cat-chip" onclick="setCategoryFilter('Feeding', this)">Feeding (45)</button>
           <button class="cat-chip" onclick="setCategoryFilter('Health & Wellness', this)">Health & Wellness (45)</button>
           <button class="cat-chip" onclick="setCategoryFilter('Pets', this)">Pets (45)</button>
-          <button class="cat-chip" onclick="setCategoryFilter('Balloons', this)">Balloons (45)</button>
+          <button class="cat-chip" onclick="setCategoryFilter('Balloons', this)">Balloons (40)</button>
           <button class="cat-chip" onclick="setCategoryFilter('Art Supplies', this)">Art Supplies (40)</button>
           <button class="cat-chip" onclick="setCategoryFilter('Office Supplies', this)">Office Supplies (40)</button>
         </div>
@@ -1144,8 +1144,8 @@
 
       <!-- Result Counter -->
       <div style="font-size: 0.76rem; color: var(--text-muted); display: flex; justify-content: space-between; padding: 0 0.2rem;">
-        <span>Showing <strong id="matchCount" style="color: var(--text-white);">530</strong> items matching criteria</span>
-        <span>Local Context: <strong>406 S Walton Blvd, Bentonville, AR 72712</strong></span>
+        <span>Showing <strong id="matchCount" style="color: var(--text-white);">520</strong> items matching criteria</span>
+        <span>Local Context: <strong>406 S Walton Blvd, Bentonville, AR 72712 (Store #100)</strong></span>
       </div>
 
       <!-- Grid Cards View -->
@@ -1366,13 +1366,13 @@
         <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-white); margin-top: 0.4rem;">Live Azure Execution Log Simulation:</div>
         <div class="terminal-box">
           <div><span class="t-time">[2026-10-18 04:00:01 UTC]</span> [INFO] Logic App triggered scheduled run. Container 'aci-walmart-scraper-job' starting...</div>
-          <div><span class="t-time">[2026-10-18 04:00:05 UTC]</span> [INFO] Loaded config/locations.json: Target Store #5260 (Bentonville, AR 72712)</div>
+          <div><span class="t-time">[2026-10-18 04:00:05 UTC]</span> [INFO] Loaded config/locations.json: Target Store #100 (Bentonville Supercenter, AR 72712)</div>
           <div><span class="t-time">[2026-10-18 04:00:07 UTC]</span> [INFO] Injected session cookies: storeIntent=PICKUP, postalCode=72712</div>
           <div><span class="t-time">[2026-10-18 04:00:15 UTC]</span> [INFO] Processing 11 categories from Walmart_Category_URLs.csv</div>
-          <div><span class="t-time">[2026-10-18 04:01:05 UTC]</span> [INFO] Food & Pantry: 72 items extracted. Anti-bot checks clean.</div>
-          <div><span class="t-time">[2026-10-18 04:01:45 UTC]</span> [INFO] Household & Personal Care: 108 items extracted. Volume deals captured.</div>
-          <div><span class="t-time">[2026-10-18 04:02:18 UTC]</span> [INFO] Beauty, Baby, Pets, Supplies: 350 items extracted. Canary item 'Great Value Milk' verified.</div>
-          <div><span class="t-time">[2026-10-18 04:02:22 UTC]</span> [INFO] Validation Gate: 530 records parsed. 0 schema errors. Quality criteria MET.</div>
+          <div><span class="t-time">[2026-10-18 04:01:05 UTC]</span> [INFO] Food & Pantry: 75 items extracted. Anti-bot checks clean.</div>
+          <div><span class="t-time">[2026-10-18 04:01:45 UTC]</span> [INFO] Household & Personal Care: 100 items extracted. Volume deals captured.</div>
+          <div><span class="t-time">[2026-10-18 04:02:18 UTC]</span> [INFO] Beauty, Baby, Pets, Supplies: 345 items extracted. Canary item 'Great Value Milk' verified.</div>
+          <div><span class="t-time">[2026-10-18 04:02:22 UTC]</span> [INFO] Validation Gate: 520 records parsed. 0 schema errors. Quality criteria MET.</div>
           <div><span class="t-time">[2026-10-18 04:02:23 UTC]</span> [INFO] Atomic swap performed. Production dataset updated safely.</div>
           <div><span class="t-time">[2026-10-18 04:02:24 UTC]</span> [INFO] Container job complete with exit code 0. Shuts down automatically.</div>
         </div>
@@ -1390,12 +1390,12 @@
           <span class="badge-pill pill-azure">JSON Deliverable</span>
         </div>
         <p style="font-size: 0.85rem; color: var(--text-300); line-height: 1.5;">
-          The dataset below contains 530 production-verified records strictly adhering to the 22-field JSON sequence for the assigned Bentonville Supercenter.
+          The dataset below contains 520 production-verified records strictly adhering to the 22-field JSON sequence for the assigned Bentonville Supercenter.
         </p>
         <div style="display: flex; gap: 0.65rem; flex-wrap: wrap;">
           <button class="nav-tab-btn active" onclick="downloadJSON()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            Download 530 Records (JSON)
+            Download 520 Records (JSON)
           </button>
           <button class="nav-tab-btn" onclick="copyJSON()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
@@ -1628,7 +1628,7 @@
 
     function copyJSON() {
       navigator.clipboard.writeText(JSON.stringify(currentData, null, 2))
-        .then(() => alert("Copied 530 records JSON to clipboard!"))
+        .then(() => alert("Copied 520 records JSON to clipboard!"))
         .catch(err => alert("Copy failed: " + err));
     }
 

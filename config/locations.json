@@ -1,19 +1,31 @@
 [
   {
-    "store_id": "5260",
+    "store_id": "100",
     "zipcode": "72712",
     "store_name": "Bentonville Supercenter",
     "store_location": "406 S Walton Blvd, Bentonville, AR 72712",
     "store_logo": "https://i5.walmartimages.com/dfw/63fd9f59-b3e1/7a569e53-f89a-4b47-97e6-d458b8a0204f/v1/walmartLogo.svg",
+    "store_url": "https://www.walmart.com/store/100-bentonville-ar",
     "fulfillment_intent": "pickup",
     "is_default": true
   },
   {
+    "store_id": "5260",
+    "zipcode": "72758",
+    "store_name": "Rogers Supercenter",
+    "store_location": "4208 Pleasant Crossing Blvd, Rogers, AR 72758",
+    "store_logo": "https://i5.walmartimages.com/dfw/63fd9f59-b3e1/7a569e53-f89a-4b47-97e6-d458b8a0204f/v1/walmartLogo.svg",
+    "store_url": "https://www.walmart.com/store/5260-rogers-ar",
+    "fulfillment_intent": "pickup",
+    "is_default": false
+  },
+  {
     "store_id": "2648",
-    "zipcode": "75201",
+    "zipcode": "75204",
     "store_name": "Dallas Supercenter",
     "store_location": "2305 N Central Expy, Dallas, TX 75204",
     "store_logo": "https://i5.walmartimages.com/dfw/63fd9f59-b3e1/7a569e53-f89a-4b47-97e6-d458b8a0204f/v1/walmartLogo.svg",
+    "store_url": "https://www.walmart.com/store/2648-dallas-tx",
     "fulfillment_intent": "pickup",
     "is_default": false
   },
@@ -23,6 +35,7 @@
     "store_name": "Orlando Supercenter",
     "store_location": "8990 S Orange Blossom Trl, Orlando, FL 32809",
     "store_logo": "https://i5.walmartimages.com/dfw/63fd9f59-b3e1/7a569e53-f89a-4b47-97e6-d458b8a0204f/v1/walmartLogo.svg",
+    "store_url": "https://www.walmart.com/store/890-orlando-fl",
     "fulfillment_intent": "pickup",
     "is_default": false
   }

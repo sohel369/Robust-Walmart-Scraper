@@ -105,6 +105,9 @@ py scripts/validate_dataset.py data/output/walmart_contest_submission_500_record
 
 # Reproduce 1-command observed run with full compliance verification
 py scripts/reproduce_observed_run.py
+
+# Demonstrate actual recovery & checkpoint resumption (zero duplicate loss)
+py scripts/demonstrate_recovery.py
 ```
 
 ### 4. Run Scraper for a Specific Location

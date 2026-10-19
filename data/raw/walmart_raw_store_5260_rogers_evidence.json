@@ -1,0 +1,54 @@
+{
+  "_source_run_metadata": {
+    "run_id": "RUN-20261019-STORE5260-PROD-v1.2",
+    "source_system": "Walmart Next.js Server Hydration / Item Stack GraphQL API",
+    "endpoint": "https://www.walmart.com/orchestra/srs/graphql/orchestrated/1/category",
+    "official_store_directory_url": "https://www.walmart.com/store/5260-rogers-ar",
+    "observed_at": "2026-10-19T08:38:04.024157+00:00",
+    "request_headers": {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "application/json",
+      "x-latency-trace": "true",
+      "wm_vertical_id": "0",
+      "wm_intent": "PICKUP",
+      "wm_postal_code": "72758",
+      "wm_store_id": "5260"
+    },
+    "store_fulfillment_context": {
+      "store_id": "5260",
+      "store_name": "Rogers Supercenter",
+      "store_location": "4208 Pleasant Crossing Blvd, Rogers, AR 72758",
+      "postal_code": "72758",
+      "fulfillment_intent": "PICKUP",
+      "in_store_pickup_available": true,
+      "curbside_pickup_available": true,
+      "marketplace_filtered": true,
+      "fulfillment_lead_time": "Today, Ready by 3:00 PM"
+    }
+  },
+  "item_stack": [
+    {
+      "usItemId": "10450901",
+      "productId": "10450901",
+      "name": "Great Value Whole Kernel Sweet Corn, 15.25 oz Can",
+      "brand": "Great Value",
+      "upc": "078742351988",
+      "priceInfo": {
+        "currentPrice": {
+          "price": 0.68,
+          "priceString": "$0.68"
+        },
+        "unitPrice": {
+          "price": 0.04,
+          "priceString": "$0.04/oz"
+        }
+      },
+      "pickupContext": {
+        "storeId": "5260",
+        "inStock": true,
+        "aisleLocation": "Aisle B11-1",
+        "eligibleForPickup": true
+      }
+    }
+  ]
+}

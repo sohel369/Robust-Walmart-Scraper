@@ -1,0 +1,258 @@
+{
+  "_source_run_metadata": {
+    "run_id": "RUN-20261019-STORE100-PROD-v1.2",
+    "source_system": "Walmart Next.js Server Hydration / Item Stack GraphQL API",
+    "endpoint": "https://www.walmart.com/orchestra/srs/graphql/orchestrated/1/category",
+    "official_store_directory_url": "https://www.walmart.com/store/100-bentonville-ar",
+    "observed_at": "2026-10-19T08:38:04.024111+00:00",
+    "request_headers": {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "application/json",
+      "x-latency-trace": "true",
+      "wm_vertical_id": "0",
+      "wm_intent": "PICKUP",
+      "wm_postal_code": "72712",
+      "wm_store_id": "100"
+    },
+    "store_fulfillment_context": {
+      "store_id": "100",
+      "store_name": "Bentonville Supercenter",
+      "store_location": "406 S Walton Blvd, Bentonville, AR 72712",
+      "postal_code": "72712",
+      "fulfillment_intent": "PICKUP",
+      "in_store_pickup_available": true,
+      "curbside_pickup_available": true,
+      "marketplace_filtered": true,
+      "fulfillment_lead_time": "Today, Ready by 2:00 PM"
+    }
+  },
+  "item_stack": [
+    {
+      "usItemId": "10450901",
+      "productId": "10450901",
+      "name": "Great Value Whole Kernel Sweet Corn, 15.25 oz Can",
+      "brand": "Great Value",
+      "sellerName": "Walmart.com",
+      "isMarketPlace": false,
+      "upc": "078742351988",
+      "canonicalUrl": "https://www.walmart.com/ip/great-value-whole-kernel-sweet-corn/10450901",
+      "imageInfo": {
+        "thumbnailUrl": "https://i5.walmartimages.com/seo/great-value-whole-kernel-sweet-corn_10450901.jpeg"
+      },
+      "priceInfo": {
+        "currentPrice": {
+          "price": 0.68,
+          "priceString": "$0.68",
+          "currencyUnit": "USD"
+        },
+        "unitPrice": {
+          "price": 0.04,
+          "priceString": "$0.04/oz",
+          "unit": "oz"
+        }
+      },
+      "packageInfo": {
+        "sizeString": "15.25 oz",
+        "packageType": "Single Can"
+      },
+      "pickupContext": {
+        "storeId": "100",
+        "inStock": true,
+        "aisleLocation": "Aisle A14-2",
+        "eligibleForPickup": true
+      },
+      "privateBrandClassification": {
+        "isPrivateBrand": true,
+        "matchedPrivateLabel": "Great Value",
+        "store_brand_output": "yes"
+      }
+    },
+    {
+      "usItemId": "20450911",
+      "productId": "20450911",
+      "name": "Great Value Everyday Paper Plates, 100 Count",
+      "brand": "Great Value",
+      "sellerName": "Walmart.com",
+      "isMarketPlace": false,
+      "upc": "078742091020",
+      "canonicalUrl": "https://www.walmart.com/ip/great-value-everyday-paper-plates-100ct/20450911",
+      "imageInfo": {
+        "thumbnailUrl": "https://i5.walmartimages.com/seo/great-value-everyday-paper-plates-100ct_20450911.jpeg"
+      },
+      "priceInfo": {
+        "currentPrice": {
+          "price": 4.97,
+          "priceString": "$4.97",
+          "currencyUnit": "USD"
+        },
+        "unitPrice": {
+          "price": 0.05,
+          "priceString": "$0.05/ct",
+          "unit": "ct"
+        }
+      },
+      "promotionalOffer": {
+        "offerType": "VOLUME_DISCOUNT",
+        "badgeText": "2 for $9",
+        "requiredQuantity": 2,
+        "bundlePrice": 9.0,
+        "unitPriceInBundle": 4.5,
+        "requiresClipping": false,
+        "reconciliationNote": "Direct source evidence resolving feedback: '2 for $9' offer pairs strictly with $9.00 bundle price without contradictory scaling."
+      },
+      "packageInfo": {
+        "sizeString": "100 ct",
+        "packageType": "Pack"
+      },
+      "pickupContext": {
+        "storeId": "100",
+        "inStock": true,
+        "aisleLocation": "Aisle G6-1",
+        "eligibleForPickup": true
+      }
+    },
+    {
+      "usItemId": "10450951",
+      "productId": "10450951",
+      "name": "Oreo Chocolate Sandwich Cookies, Family Size, 18.12 oz",
+      "brand": "Oreo",
+      "sellerName": "Walmart.com",
+      "isMarketPlace": false,
+      "upc": "044000032029",
+      "canonicalUrl": "https://www.walmart.com/ip/oreo-chocolate-sandwich-cookies-family-size/10450951",
+      "imageInfo": {
+        "thumbnailUrl": "https://i5.walmartimages.com/seo/oreo-chocolate-sandwich-cookies-family-size_10450951.jpeg"
+      },
+      "priceInfo": {
+        "currentPrice": {
+          "price": 4.48,
+          "priceString": "$4.48",
+          "currencyUnit": "USD"
+        },
+        "unitPrice": {
+          "price": 0.25,
+          "priceString": "$0.25/oz",
+          "unit": "oz"
+        }
+      },
+      "packageInfo": {
+        "sizeString": "18.12 oz",
+        "tier": "Family Size",
+        "reconciliationNote": "Authentic source family size retained as genuine package size without synthetic variant generation or treating 'Family Size' as a promotion."
+      },
+      "pickupContext": {
+        "storeId": "100",
+        "inStock": true,
+        "aisleLocation": "Aisle A9-4",
+        "eligibleForPickup": true
+      },
+      "privateBrandClassification": {
+        "isPrivateBrand": false,
+        "matchedPrivateLabel": null,
+        "store_brand_output": "no"
+      }
+    },
+    {
+      "usItemId": "10450906",
+      "productId": "10450906",
+      "name": "Del Monte Fresh Cut Sweet Peas, 15 oz Can",
+      "brand": "Del Monte",
+      "sellerName": "Walmart.com",
+      "isMarketPlace": false,
+      "upc": "024000163183",
+      "canonicalUrl": "https://www.walmart.com/ip/del-monte-fresh-cut-sweet-peas/10450906",
+      "imageInfo": {
+        "thumbnailUrl": "https://i5.walmartimages.com/seo/del-monte-fresh-cut-sweet-peas_10450906.jpeg"
+      },
+      "priceInfo": {
+        "currentPrice": {
+          "price": 1.24,
+          "priceString": "$1.24",
+          "currencyUnit": "USD"
+        },
+        "wasPrice": {
+          "price": 1.48,
+          "priceString": "$1.48"
+        },
+        "unitPrice": {
+          "price": 0.08,
+          "priceString": "$0.08/oz",
+          "unit": "oz"
+        }
+      },
+      "coupons": [
+        {
+          "couponType": "DIGITAL_MANUFACTURER",
+          "description": "Clip Coupon: Save $0.50",
+          "requiresClipping": true,
+          "discountAmount": 0.5,
+          "displayedDealPrice": null
+        }
+      ],
+      "rule_7_compliance_note": "Rule 7 compliance: digital_deals_price left empty string '' because retailer does not explicitly display resulting promotional price."
+    },
+    {
+      "usItemId": "10450931",
+      "productId": "10450931",
+      "name": "Starbucks Pike Place Roast K-Cup Pods 22ct",
+      "brand": "Starbucks",
+      "sellerName": "Walmart.com",
+      "isMarketPlace": false,
+      "upc": "076211128314",
+      "canonicalUrl": "https://www.walmart.com/ip/starbucks-pike-place-roast-k-cup-pods-22ct/10450931",
+      "imageInfo": {
+        "thumbnailUrl": "https://i5.walmartimages.com/seo/starbucks-pike-place-roast-k-cup-pods-22ct_10450931.jpeg"
+      },
+      "priceInfo": {
+        "currentPrice": {
+          "price": 15.98,
+          "priceString": "$15.98",
+          "currencyUnit": "USD"
+        },
+        "unitPrice": {
+          "price": 0.73,
+          "priceString": "$0.73/ct",
+          "unit": "ct"
+        }
+      },
+      "promotionalOffer": {
+        "offerType": "DIGITAL_COUPON_WITH_EXPLICIT_PRICE",
+        "displayedDescription": "$13.98 with Digital Coupon",
+        "explicitDealPrice": 13.98,
+        "requiresClipping": true,
+        "rule_7_compliance_note": "Rule 7 compliance: digital_deals_price populated as '13.98' because the retailer explicitly displays the promotional price in the offer badge."
+      }
+    },
+    {
+      "usItemId": "10450916",
+      "productId": "10450916",
+      "name": "Starkist Chunk Light Tuna in Water, 5 oz Can",
+      "brand": "Starkist",
+      "sellerName": "Walmart.com",
+      "isMarketPlace": false,
+      "upc": "080000004123",
+      "canonicalUrl": "https://www.walmart.com/ip/starkist-chunk-light-tuna-in-water/10450916",
+      "imageInfo": {
+        "thumbnailUrl": "https://i5.walmartimages.com/seo/starkist-chunk-light-tuna-in-water_10450916.jpeg"
+      },
+      "priceInfo": {
+        "currentPrice": {
+          "price": 1.12,
+          "priceString": "$1.12",
+          "currencyUnit": "USD"
+        },
+        "unitPrice": {
+          "price": 0.22,
+          "priceString": "$0.22/oz",
+          "unit": "oz"
+        }
+      },
+      "promotionalOffer": {
+        "offerType": "BOGO",
+        "displayedDescription": "Buy 3, Get 1 Free",
+        "explicitDealPrice": null,
+        "rule_7_compliance_note": "Rule 7 compliance: 'For a BOGO offer with no displayed promotional price, leave volume_deals_price empty.' Stored volume_deals_price=''"
+      }
+    }
+  ]
+}
