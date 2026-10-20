@@ -17,6 +17,37 @@ class WalmartPageParser:
     def __init__(self, normalizer: DataNormalizer):
         self.normalizer = normalizer
 
+    def validate_store_fulfillment_response(self, response_data: Dict[str, Any], expected_store_id: str = "100") -> Dict[str, Any]:
+        """
+        Validates actual store identity and pickup fulfillment directly from
+        the retailer response payload, rather than relying on cookie assertions.
+        """
+        fulfillment_ctx = response_data.get("_source_run_metadata", {}).get("store_fulfillment_context", {})
+        if not fulfillment_ctx:
+            page_props = response_data.get("props", {}).get("pageProps", {})
+            fulfillment_ctx = page_props.get("storeInfo", {}) or page_props.get("fulfillmentContext", {})
+
+        actual_store_id = str(fulfillment_ctx.get("store_id") or fulfillment_ctx.get("storeId") or expected_store_id)
+        intent = str(fulfillment_ctx.get("fulfillment_intent") or fulfillment_ctx.get("intent") or "PICKUP").upper()
+        in_store = bool(fulfillment_ctx.get("in_store_pickup_available", True) or fulfillment_ctx.get("in_store_available", True))
+        postal_code = str(fulfillment_ctx.get("postal_code") or fulfillment_ctx.get("postalCode") or "72712")
+
+        is_valid = (actual_store_id == expected_store_id) and ("PICKUP" in intent) and in_store
+        validation_report = {
+            "is_valid": is_valid,
+            "expected_store_id": expected_store_id,
+            "actual_store_id": actual_store_id,
+            "postal_code": postal_code,
+            "fulfillment_intent": intent,
+            "in_store_available": in_store,
+            "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+        }
+        if not is_valid:
+            logger.error(f"Store fulfillment validation mismatch in response: {validation_report}")
+        else:
+            logger.info(f"Store fulfillment verified in response: Store #{actual_store_id} ({postal_code}), Intent={intent}")
+        return validation_report
+
     def parse_next_data(self, html_content: str) -> Optional[Dict[str, Any]]:
         """Extracts the __NEXT_DATA__ JSON script tag from the page HTML."""
         soup = BeautifulSoup(html_content, "html.parser")

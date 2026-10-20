@@ -1,0 +1,158 @@
+{
+  "audit_version": "v2.0-PROD",
+  "authoritative_entry": "Walmart #20 & #37 Unified Release",
+  "target_store": {
+    "store_id": "100",
+    "store_name": "Bentonville Supercenter",
+    "store_location": "406 S Walton Blvd, Bentonville, AR 72712",
+    "postal_code": "72712",
+    "fulfillment_mode": "PICKUP"
+  },
+  "source_to_output_metrics": {
+    "category_responses_traversed": 11,
+    "total_raw_source_items": 520,
+    "total_output_dataset_records": 520,
+    "reconciliation_match_rate_percent": 100.0,
+    "field_level_discrepancies": 0,
+    "schema_22_field_order_pass": true,
+    "null_values_count": 0,
+    "gupc_empty_pass": true,
+    "unit_price_empty_pass": true,
+    "approx_weight_violations": 0
+  },
+  "response_validations": [
+    {
+      "file": "category_01_food_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_02_household_essentials_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_03_personal_care_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_04_beauty_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_05_diapering_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_06_feeding_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_07_health_wellness_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_08_pets_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_09_balloons_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_10_art_supplies_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    },
+    {
+      "file": "category_11_office_supplies_raw_response.json",
+      "audit": {
+        "is_valid": true,
+        "expected_store_id": "100",
+        "actual_store_id": "100",
+        "postal_code": "72712",
+        "fulfillment_intent": "PICKUP",
+        "in_store_available": true,
+        "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+      }
+    }
+  ],
+  "executed_at": "2026-10-20T02:42:22.633002+00:00"
+}

@@ -4,7 +4,7 @@ import random
 import logging
 from typing import Dict, Any, Optional
 from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
-from playwright_stealth import stealth_sync
+from playwright_stealth import Stealth
 
 logger = logging.getLogger("WalmartScraper.BrowserEngine")
 
@@ -98,7 +98,7 @@ class BrowserEngine:
         time.sleep(delay)
 
         page: Page = self._context.new_page()
-        stealth_sync(page)
+        Stealth().apply_stealth_sync(page)
 
         try:
             logger.info(f"Navigating to {url} (pacing delay: {delay:.2f}s)")

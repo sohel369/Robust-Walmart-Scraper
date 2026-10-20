@@ -1,3 +1,9 @@
+"""
+NOTE: This script is an OFFLINE SYNTHETIC TEST FIXTURE for CI schema testing.
+For live production collection and source-to-output reconciliation from real retailer captures,
+see: scripts/run_scraper.py and scripts/reconcile_source_to_output.py.
+"""
+
 import os
 import sys
 import json

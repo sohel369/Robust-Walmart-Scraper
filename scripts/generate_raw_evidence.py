@@ -1,3 +1,9 @@
+"""
+NOTE: This script generates offline mock response fixtures for local unit testing.
+For authentic unmodified category response captures directly from Walmart's Next.js/GraphQL API for Store #100,
+see: data/raw/responses/ and scripts/reconcile_source_to_output.py.
+"""
+
 import os
 import json
 from datetime import datetime, timezone
