@@ -30,6 +30,9 @@ class StorageManager:
     def get_checkpoint_path(self, store_id: str) -> str:
         return os.path.join(self.checkpoint_dir, f"checkpoint_store_{store_id}.json")
 
+    def get_checkpoint_rows_path(self, store_id: str) -> str:
+        return os.path.join(self.checkpoint_dir, f"checkpoint_{store_id}_rows.jsonl")
+
     def load_checkpoint(self, store_id: str) -> Dict[str, Any]:
         """Loads completed categories, seen keys, and staging filepath for resumption."""
         cp_path = self.get_checkpoint_path(store_id)
@@ -61,6 +64,52 @@ class StorageManager:
         with open(temp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         shutil.move(temp_path, cp_path)
+
+        # Synchronize staged rows into dedicated persistent checkpoint rows snapshot
+        if staging_filepath and os.path.exists(staging_filepath):
+            rows_path = self.get_checkpoint_rows_path(store_id)
+            rows_temp = f"{rows_path}.tmp"
+            shutil.copyfile(staging_filepath, rows_temp)
+            shutil.move(rows_temp, rows_path)
+
+    def restore_checkpoint_rows(self, store_id: str, current_staging_filepath: str) -> int:
+        """
+        Restores previously collected rows from an interrupted run into current staging.
+        Performs strict ID-level deduplication to prevent duplicate rows across repeat resumes.
+        """
+        rows_path = self.get_checkpoint_rows_path(store_id)
+        restored = 0
+        if not os.path.exists(rows_path):
+            return restored
+
+        existing_keys = set()
+        if os.path.exists(current_staging_filepath):
+            for r in self.load_staging_records(current_staging_filepath):
+                key = r.get("upc") or r.get("product_id") or r.get("product_title")
+                if key:
+                    existing_keys.add(key)
+
+        with open(rows_path, "r", encoding="utf-8") as src, open(current_staging_filepath, "a", encoding="utf-8") as dst:
+            for line in src:
+                line_str = line.strip()
+                if not line_str:
+                    continue
+                try:
+                    record = json.loads(line_str)
+                    key = record.get("upc") or record.get("product_id") or record.get("product_title")
+                    if key and key in existing_keys:
+                        continue
+                    if key:
+                        existing_keys.add(key)
+                    dst.write(line_str + "\n")
+                    restored += 1
+                except json.JSONDecodeError:
+                    continue
+
+        logger.info(
+            f"Restored {restored} unique previously collected rows from checkpoint into {current_staging_filepath}."
+        )
+        return restored
 
     def clear_checkpoint(self, store_id: str) -> None:
         """Removes checkpoint file after a completely successful run."""

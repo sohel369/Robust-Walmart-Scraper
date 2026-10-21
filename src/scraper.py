@@ -78,13 +78,16 @@ class WalmartProductionScraper:
             total_records_collected = len(restored_records)
             logger.info(
                 f"CHECKPOINT DETECTED: Resuming session for Store #{store_id}. "
-                f"Restored {total_records_collected} existing rows from staging ({staging_filepath})."
+                f"Found {total_records_collected} existing rows in active staging ({staging_filepath})."
             )
         else:
             run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             staging_filename = f"staging_run_store_{store_id}_{run_timestamp}.jsonl"
             staging_filepath = os.path.join(self.storage.staging_dir, staging_filename)
-            total_records_collected = 0
+            restored_count = self.storage.restore_checkpoint_rows(store_id, staging_filepath)
+            total_records_collected = restored_count
+            if restored_count > 0:
+                logger.info(f"Restored {restored_count} verified rows from checkpoint snapshot into fresh staging session.")
 
         # 3. Load Categories CSV
         category_entries = self.config_loader.load_category_urls()
@@ -98,6 +101,7 @@ class WalmartProductionScraper:
 
         scraping_cfg = self.settings.get("scraping", {})
         max_pages = max_pages_override if max_pages_override is not None else scraping_cfg.get("max_pages_per_subcategory")
+        debug_truncated = (max_pages_override is not None)
         max_retries = scraping_cfg.get("max_retries_per_page", 3)
         backoff_factor = scraping_cfg.get("retry_backoff_factor", 2.0)
 
@@ -180,6 +184,11 @@ class WalmartProductionScraper:
                     logger.warning(
                         f"Skipping checkpoint completion for [{subcat_key}] due to page fetch failures. "
                         f"It will be automatically re-attempted on subsequent runs."
+                    )
+                elif debug_truncated:
+                    logger.warning(
+                        f"DEBUG RUN OVERRIDE: Subcategory [{subcat_key}] was truncated by max_pages_override={max_pages_override}. "
+                        f"Skipping checkpoint recording to prevent partial state corruption."
                     )
                 else:
                     completed_subcategories.append(subcat_key)
