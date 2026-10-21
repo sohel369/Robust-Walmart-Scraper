@@ -1,6 +1,6 @@
 {
   "project_name": "Walmart Production Scraper for Azure",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "scraping": {
     "headless": true,
     "browser_type": "chromium",
@@ -10,7 +10,7 @@
     "max_retries_per_page": 3,
     "retry_backoff_factor": 2.0,
     "page_timeout_ms": 45000,
-    "max_pages_per_subcategory": 10,
+    "max_pages_per_subcategory": null,
     "min_items_threshold_warning": 10,
     "canary_product_id": "10450114",
     "canary_product_title": "Great Value Whole Milk"

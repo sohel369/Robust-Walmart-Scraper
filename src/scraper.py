@@ -66,14 +66,25 @@ class WalmartProductionScraper:
             f"ZIP={location.get('zipcode')}, ID={store_id}, Mode=In-Store/Pickup"
         )
 
-        # 2. Setup Staging and Checkpoints
-        run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        staging_filename = f"staging_run_store_{store_id}_{run_timestamp}.jsonl"
-        staging_filepath = os.path.join(self.storage.staging_dir, staging_filename)
-
+        # 2. Setup Staging and Checkpoints (with Row Restoration on Resume)
         checkpoint = self.storage.load_checkpoint(store_id)
         completed_subcategories: List[str] = checkpoint.get("completed_subcategories", [])
         seen_keys: Set[str] = set(checkpoint.get("scraped_ids", []))
+        checkpoint_staging_file: Optional[str] = checkpoint.get("staging_filepath")
+
+        if checkpoint_staging_file and os.path.exists(checkpoint_staging_file):
+            staging_filepath = checkpoint_staging_file
+            restored_records = self.storage.load_staging_records(staging_filepath)
+            total_records_collected = len(restored_records)
+            logger.info(
+                f"CHECKPOINT DETECTED: Resuming session for Store #{store_id}. "
+                f"Restored {total_records_collected} existing rows from staging ({staging_filepath})."
+            )
+        else:
+            run_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            staging_filename = f"staging_run_store_{store_id}_{run_timestamp}.jsonl"
+            staging_filepath = os.path.join(self.storage.staging_dir, staging_filename)
+            total_records_collected = 0
 
         # 3. Load Categories CSV
         category_entries = self.config_loader.load_category_urls()
@@ -86,12 +97,11 @@ class WalmartProductionScraper:
         self.browser_engine.set_store_location(location)
 
         scraping_cfg = self.settings.get("scraping", {})
-        max_pages = max_pages_override or scraping_cfg.get("max_pages_per_subcategory", 5)
+        max_pages = max_pages_override if max_pages_override is not None else scraping_cfg.get("max_pages_per_subcategory")
         max_retries = scraping_cfg.get("max_retries_per_page", 3)
         backoff_factor = scraping_cfg.get("retry_backoff_factor", 2.0)
 
-        processed_categories_count = 0
-        total_records_collected = 0
+        processed_categories_count = len(completed_subcategories)
 
         try:
             for entry in category_entries:
@@ -102,13 +112,19 @@ class WalmartProductionScraper:
 
                 if subcat_key in completed_subcategories:
                     logger.info(f"Resuming: Skipping already completed subcategory [{subcat_key}]")
-                    processed_categories_count += 1
                     continue
 
                 logger.info(f"Scraping category: {cat} -> {sub_cat} ({base_url})")
                 subcat_records_count = 0
+                subcat_had_failure = False
+                page_num = 1
 
-                for page_num in range(1, max_pages + 1):
+                # Unbounded dynamic pagination (no demonstration limits in production)
+                while True:
+                    if max_pages is not None and max_pages > 0 and page_num > max_pages:
+                        logger.info(f"Reached page limit {max_pages} for {subcat_key}.")
+                        break
+
                     page_url = f"{base_url}?page={page_num}&affinityOverride=store" if page_num > 1 else f"{base_url}?affinityOverride=store"
                     
                     html_content = ""
@@ -129,8 +145,12 @@ class WalmartProductionScraper:
                             time.sleep(backoff_factor * attempt)
 
                     if not success:
-                        logger.error(f"Failed to fetch {page_url} after {max_retries} retries. Skipping page.")
-                        continue
+                        logger.error(
+                            f"Permanent page failure on {page_url} after {max_retries} attempts. "
+                            f"Subcategory [{subcat_key}] marked incomplete."
+                        )
+                        subcat_had_failure = True
+                        break
 
                     # Parse page records
                     page_records: List[WalmartProductRecord] = self.parser.parse_page(
@@ -154,12 +174,20 @@ class WalmartProductionScraper:
                         total_records_collected += 1
                         subcat_records_count += 1
 
-                completed_subcategories.append(subcat_key)
-                processed_categories_count += 1
-                
-                # Checkpoint progress after each completed subcategory
-                self.storage.save_checkpoint(store_id, completed_subcategories, list(seen_keys))
-                logger.info(f"Completed {subcat_key}: {subcat_records_count} items. Total so far: {total_records_collected}")
+                    page_num += 1
+
+                if subcat_had_failure:
+                    logger.warning(
+                        f"Skipping checkpoint completion for [{subcat_key}] due to page fetch failures. "
+                        f"It will be automatically re-attempted on subsequent runs."
+                    )
+                else:
+                    completed_subcategories.append(subcat_key)
+                    processed_categories_count += 1
+                    
+                    # Checkpoint progress after each completed subcategory (persists staging path for full row restoration)
+                    self.storage.save_checkpoint(store_id, completed_subcategories, list(seen_keys), staging_filepath)
+                    logger.info(f"Completed {subcat_key}: {subcat_records_count} items. Total so far: {total_records_collected}")
 
         finally:
             if self.browser_engine:

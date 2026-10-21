@@ -31,7 +31,7 @@ class StorageManager:
         return os.path.join(self.checkpoint_dir, f"checkpoint_store_{store_id}.json")
 
     def load_checkpoint(self, store_id: str) -> Dict[str, Any]:
-        """Loads completed categories and pages for resumption."""
+        """Loads completed categories, seen keys, and staging filepath for resumption."""
         cp_path = self.get_checkpoint_path(store_id)
         if os.path.exists(cp_path):
             try:
@@ -39,15 +39,22 @@ class StorageManager:
                     return json.load(f)
             except Exception as e:
                 logger.warning(f"Could not read checkpoint file {cp_path}: {e}")
-        return {"completed_subcategories": [], "scraped_ids": []}
+        return {"completed_subcategories": [], "scraped_ids": [], "staging_filepath": None}
 
-    def save_checkpoint(self, store_id: str, completed_subcategories: List[str], scraped_ids: List[str]) -> None:
-        """Saves current state to checkpoint file."""
+    def save_checkpoint(
+        self,
+        store_id: str,
+        completed_subcategories: List[str],
+        scraped_ids: List[str],
+        staging_filepath: Optional[str] = None
+    ) -> None:
+        """Saves current state and active staging file to checkpoint."""
         cp_path = self.get_checkpoint_path(store_id)
         temp_path = f"{cp_path}.tmp"
         data = {
             "store_id": store_id,
             "last_updated": datetime.now(timezone.utc).isoformat(),
+            "staging_filepath": staging_filepath,
             "completed_subcategories": completed_subcategories,
             "scraped_ids": list(set(scraped_ids))
         }
@@ -107,11 +114,11 @@ class StorageManager:
             )
             return False
 
-        # Category coverage check: Must not be drastically incomplete
-        if total_categories_expected > 0 and (categories_processed / total_categories_expected) < 0.8:
+        # Category coverage check: Strict 100% category coverage required in production
+        if total_categories_expected > 0 and categories_processed < total_categories_expected:
             logger.error(
                 f"ABORTING DATASET COMMIT: Incomplete category coverage ({categories_processed}/{total_categories_expected}). "
-                f"Existing dataset will NOT be overwritten!"
+                f"Production requires 100% category completion. Existing dataset will NOT be overwritten!"
             )
             return False
 

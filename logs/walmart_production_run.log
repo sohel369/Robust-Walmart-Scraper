@@ -37,3 +37,31 @@
 2026-10-20 08:59:37,383 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
 2026-10-20 08:59:37,389 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
 2026-10-20 08:59:37,394 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:47:25,063 [INFO] WalmartScraper.Reconciliation: Loaded 520 production output records from C:\Users\User\Desktop\esdo table\walmart-scraper-azure\data\output\walmart_contest_submission_500_records.json
+2026-10-20 11:47:25,172 [INFO] WalmartScraper.Reconciliation: Machine-readable audit report saved to: C:\Users\User\Desktop\esdo table\walmart-scraper-azure\logs\source_to_output_reconciliation_audit.json
+2026-10-20 11:48:14,571 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,572 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,574 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,576 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,578 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,580 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,581 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,583 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,584 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,586 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 11:48:14,588 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-20 12:02:33,857 [INFO] WalmartScraper.Reconciliation: Loaded 520 production output records from C:\Users\User\Desktop\esdo table\walmart-scraper-azure\data\output\walmart_contest_submission_500_records.json
+2026-10-20 12:02:33,901 [INFO] WalmartScraper.Reconciliation: Machine-readable audit report saved to: C:\Users\User\Desktop\esdo table\walmart-scraper-azure\logs\source_to_output_reconciliation_audit.json
+2026-10-21 10:35:43,584 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,606 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,624 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,643 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,662 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,680 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,699 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,715 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,736 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,756 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:43,778 [INFO] WalmartScraper.Parser: Store fulfillment verified in response: Store #100 (72712), Intent=PICKUP
+2026-10-21 10:35:51,393 [INFO] WalmartScraper.Reconciliation: Loaded 520 production output records from c:\Users\User\Desktop\esdo table\walmart-scraper-azure\data\output\walmart_contest_submission_500_records.json
+2026-10-21 10:35:51,456 [INFO] WalmartScraper.Reconciliation: Machine-readable audit report saved to: c:\Users\User\Desktop\esdo table\walmart-scraper-azure\logs\source_to_output_reconciliation_audit.json
