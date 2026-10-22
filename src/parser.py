@@ -202,10 +202,13 @@ class WalmartPageParser:
 
             image_url = str(item.get("image") or item.get("imageInfo", {}).get("thumbnailUrl") or "")
 
-            upc = str(item.get("upc") or item.get("usItemId") or item.get("id") or "").strip()
+            raw_upc = str(item.get("upc") or item.get("gtin") or item.get("barcode") or "").strip()
+            # Preserve genuine source UPC only; strictly avoid constructing replacements from item IDs
+            upc = raw_upc if (raw_upc.isdigit() and len(raw_upc) in (10, 11, 12, 13, 14)) else ""
 
-            # 9. Deduplication check (Item ID / UPC / URL)
-            dedup_key = upc if upc else canonical_url
+            # 9. Deduplication check (URL / Item ID / UPC)
+            item_id = str(item.get("usItemId") or item.get("id") or "").strip()
+            dedup_key = upc if upc else (item_id if item_id else canonical_url)
             if not dedup_key or dedup_key in seen_keys:
                 continue
             seen_keys.add(dedup_key)
