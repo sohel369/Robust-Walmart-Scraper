@@ -1,7 +1,7 @@
 # Walmart Production Scraper for Microsoft Azure (Release v2.0-PROD)
 **Authoritative Unified Submission for Walmart Contest Entries #20 & #37**
 
-A production-grade, highly reliable retail scraper designed to collect location-specific product catalogs, prices, promotions, measurements, and category hierarchies from Walmart. Engineered for deployment in Microsoft Azure with scheduled bi-weekly runs, checkpoint resumption, anti-bot safeguards, and atomic dataset safety.
+A production-grade, highly reliable retail scraper designed to collect location-specific product catalogs, prices, promotions, measurements, and category hierarchies from Walmart. Engineered for deployment in Microsoft Azure with scheduled twice-per-week runs (Sunday & Wednesday 04:00 UTC), checkpoint resumption, anti-bot safeguards, and atomic dataset safety.
 
 ---
 
@@ -51,7 +51,7 @@ walmart-scraper-azure/
 │   ├── docker-compose.yml         # Container orchestrator
 │   ├── azure-deploy.sh            # Linux/Mac Azure deployment
 │   ├── azure-deploy.ps1           # Windows PowerShell Azure deployment
-│   └── azure-cron-schedule.json   # Bi-weekly recurrence definition
+│   └── azure-cron-schedule.json   # Twice-per-week recurrence definition (Sun/Wed 04:00 UTC)
 ├── requirements.txt
 ├── CONTEST_SUBMISSION_REPORT.md   # Complete contest entry report
 └── README.md

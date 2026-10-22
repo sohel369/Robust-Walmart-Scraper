@@ -1,6 +1,6 @@
 # ==============================================================================
 # Walmart Scraper Microsoft Azure PowerShell Deployment Script
-# Automatically builds, deploys, and configures bi-weekly execution in Azure
+# Automatically builds, deploys, and configures twice-per-week execution in Azure
 # ==============================================================================
 
 param(

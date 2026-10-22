@@ -3,7 +3,7 @@ set -e
 
 # ==============================================================================
 # Walmart Scraper Microsoft Azure Deployment Script
-# Automatically builds, deploys, and configures bi-weekly execution in Azure
+# Automatically builds, deploys, and configures twice-per-week execution in Azure
 # ==============================================================================
 
 RESOURCE_GROUP="rg-walmart-scraper-prod"
