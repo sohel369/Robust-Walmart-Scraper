@@ -660,28 +660,24 @@ def generate_verified_walmart_dataset():
             )
             all_records.append(record.to_ordered_dict())
 
-    # Write output to walmart_contest_submission_500_records.json
-    output_path = os.path.join(storage.output_dir, "walmart_contest_submission_500_records.json")
+    # Write output to dedicated fixture output directory to avoid touching production catalog
+    fixture_output_dir = os.path.join(os.path.dirname(__file__), "output")
+    os.makedirs(fixture_output_dir, exist_ok=True)
+    output_path = os.path.join(fixture_output_dir, "fixture_walmart_contest_submission_500_records.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(all_records, f, indent=2, ensure_ascii=False)
 
-    print(f"Built {len(all_records)} 100% verified Walmart records.")
+    print(f"Built {len(all_records)} 100% verified Walmart fixture records in {output_path}.")
     print(f"Categories covered ({len(category_counts)}): {json.dumps(category_counts, indent=2)}")
 
-    # Sync to preview/dataset.js
-    preview_js_path = os.path.join(config_loader.base_dir, "preview", "dataset.js")
-    with open(preview_js_path, "w", encoding="utf-8") as f:
-        f.write("window.SCRAPED_DATA = " + json.dumps(all_records, ensure_ascii=False) + ";\n")
-    print(f"Synced preview dataset: {preview_js_path}")
-
-    # Generate full audit statistics
+    # Generate full fixture audit statistics
     stats = storage.calculate_statistics(all_records)
     stats["runtime_seconds"] = 142.85
     stats["store_id"] = location.get("store_id")
     stats["zipcode"] = location.get("zipcode")
     stats["store_name"] = location.get("store_name")
 
-    stats_path = os.path.join(storage.output_dir, "submission_audit_statistics.json")
+    stats_path = os.path.join(fixture_output_dir, "fixture_submission_audit_statistics.json")
     with open(stats_path, "w", encoding="utf-8") as f:
         json.dump(stats, f, indent=2)
     print(f"Audit statistics saved: {stats_path}")
