@@ -11,7 +11,7 @@ from src.scraper import WalmartProductionScraper
 def main():
     parser = argparse.ArgumentParser(description="Run Walmart Production Scraper")
     parser.add_argument("--zipcode", type=str, default="72712", help="Target Walmart store ZIP code")
-    parser.add_argument("--max-pages", type=int, default=3, help="Max pages to scrape per subcategory")
+    parser.add_argument("--max-pages", type=int, default=None, help="Optional max pages override per subcategory (default: None for complete unbounded traversal)")
     args = parser.parse_args()
 
     scraper = WalmartProductionScraper()
