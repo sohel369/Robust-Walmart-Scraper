@@ -10,3 +10,5 @@ env/
 venv/
 .DS_Store
 Thumbs.db
+*.zip
+data/checkpoints/
