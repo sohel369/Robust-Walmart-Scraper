@@ -1,21 +1,21 @@
 # GIT PROVENANCE & FILE INTEGRITY MANIFEST (WALMART ENTRY #20)
 
-**Generated UTC:** 2026-10-23T03:45:40.202380+00:00  
+**Generated UTC:** 2026-10-23T04:02:30.636793+00:00  
 **Repository URL:** [https://github.com/sohel369/Robust-Walmart-Scraper.git](https://github.com/sohel369/Robust-Walmart-Scraper.git)  
 **Branch:** `master`  
-**HEAD Commit:** `2c8aa554ceb7b18e7235986817fa34a41754d720`  
-**Working Tree Clean:** `False`  
+**HEAD Commit:** `d4cb982287d8dc82e97a261104de96f4301bfb36`  
+**Working Tree Clean:** `True`  
 
 ## 1. Recent Authoritative Commits
 ```text
+d4cb982 Implement indefinite assortment retention, crawl_date separation, and Azure bounded probe specification
+25f1f7a Isolate test fixture output and add Git provenance and integrity manifest
 2c8aa55 Synchronize Walmart baseline run dates to 2026-10-20 and update audit logs
 09e8b9e Add dataset version, provenance and lineage manifest for Walmart
 74ca669 Standardize scheduling to twice-per-week
 67fddb2 Preserve genuine source UPC and eliminate item ID fallback for Walmart
 643452c Enforce unbounded traversal, debug truncate guard, and persistent checkpoint row restoration
 3142fc9 Remove 10-page limit, enforce 100% publication gate, and retain restored rows on resume
-6422f3b Add .gitignore and remove pycache bytecode from tracking
-f8f7125 Clean production tree: remove obsolete test generators, finalize v2.0-PROD
 ```
 
 ## 2. Deliverable File SHA-256 Checksums
@@ -31,4 +31,4 @@ Reviewers without access to Git CLI can independently verify that the deliverabl
 
 ## 3. Remote Verification Link
 The full commit history, diffs, and trees can be inspected directly on GitHub at:
-`https://github.com/sohel369/Robust-Walmart-Scraper/tree/2c8aa554ceb7b18e7235986817fa34a41754d720`
+`https://github.com/sohel369/Robust-Walmart-Scraper/tree/d4cb982287d8dc82e97a261104de96f4301bfb36`
