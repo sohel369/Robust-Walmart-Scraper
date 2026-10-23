@@ -2,7 +2,7 @@
 
 **Package:** Walmart Scraper Entry #20  
 **Authoritative Response to Review Target:** October 22 Evening Review — Item 3 & Bounded Probe Requirement  
-**Next Inspectable Delivery Target:** **October 26, 2026**  
+**Next Inspectable Delivery Target:** **Proposed: October 26, 2026 (Subject to Buyer Authorization)**  
 
 ---
 
@@ -41,4 +41,4 @@ In accordance with reviewer instructions:
 
 ## 3. Next Inspectable Delivery Date
 
-* **Next Delivery Target:** **Monday, October 26, 2026**
+* **Proposed Delivery Target:** **Monday, October 26, 2026 (Subject to Buyer Access Approval)**
