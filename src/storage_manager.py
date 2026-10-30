@@ -72,10 +72,28 @@ class StorageManager:
             shutil.copyfile(staging_filepath, rows_temp)
             shutil.move(rows_temp, rows_path)
 
+    def get_record_identity(self, record: Dict[str, Any]) -> str:
+        """
+        Derives a consistent genuine identity across collection, checkpoint restoration,
+        and indefinite retention. Prioritizes: genuine UPC -> product URL / canonical URL -> product ID -> product title.
+        Ensures products with missing UPCs are never lost during retention or resume.
+        """
+        upc = str(record.get("upc") or "").strip()
+        if upc:
+            return upc
+        url = str(record.get("url") or record.get("canonicalUrl") or "").strip()
+        if url:
+            return url
+        item_id = str(record.get("id") or record.get("product_id") or record.get("usItemId") or "").strip()
+        if item_id:
+            return item_id
+        return str(record.get("product_title") or record.get("title") or "").strip()
+
     def restore_checkpoint_rows(self, store_id: str, current_staging_filepath: str) -> int:
         """
         Restores previously collected rows from an interrupted run into current staging.
-        Performs strict ID-level deduplication to prevent duplicate rows across repeat resumes.
+        Performs strict ID-level deduplication to prevent duplicate rows across repeat resumes,
+        using consistent genuine identity across UPCs, URLs, and item IDs.
         """
         rows_path = self.get_checkpoint_rows_path(store_id)
         restored = 0
@@ -85,7 +103,7 @@ class StorageManager:
         existing_keys = set()
         if os.path.exists(current_staging_filepath):
             for r in self.load_staging_records(current_staging_filepath):
-                key = r.get("upc") or r.get("product_id") or r.get("product_title")
+                key = self.get_record_identity(r)
                 if key:
                     existing_keys.add(key)
 
@@ -96,7 +114,7 @@ class StorageManager:
                     continue
                 try:
                     record = json.loads(line_str)
-                    key = record.get("upc") or record.get("product_id") or record.get("product_title")
+                    key = self.get_record_identity(record)
                     if key and key in existing_keys:
                         continue
                     if key:
@@ -148,6 +166,9 @@ class StorageManager:
         no current pickup offer or price; keep carried observation dates/values distinct from fresh evidence.'
         
         Preserves historical products missing from fresh crawl while maintaining their original crawl_date.
+        Uses consistent genuine product identity (UPC or stable URL/item_id) so products with missing UPC
+        are never dropped.
+        CRITICAL: Stops publication if the previous catalog exists but cannot be read.
         """
         if not os.path.exists(existing_target_filepath):
             return fresh_records, 0
@@ -156,22 +177,25 @@ class StorageManager:
             with open(existing_target_filepath, "r", encoding="utf-8") as f:
                 previous_records = json.load(f)
         except Exception as e:
-            logger.warning(f"Could not load previous catalog for assortment retention: {e}")
-            return fresh_records, 0
+            logger.critical(
+                f"ABORTING PUBLICATION: Failed to read existing production catalog at {existing_target_filepath}: {e}. "
+                f"Publication stopped to protect historical assortment data from being lost or overwritten."
+            )
+            raise RuntimeError(f"Cannot read previous catalog for assortment retention: {e}")
 
-        fresh_upcs = {r.get("upc") for r in fresh_records if r.get("upc")}
+        fresh_identities = {self.get_record_identity(r) for r in fresh_records if self.get_record_identity(r)}
         carried_forward = []
 
         for prev in previous_records:
-            upc = prev.get("upc")
-            if upc and upc not in fresh_upcs:
-                # Retain unavailable store-assortment product indefinitely with original crawl_date
+            prev_id = self.get_record_identity(prev)
+            if prev_id and prev_id not in fresh_identities:
+                # Retain unavailable store-assortment product indefinitely with original historical crawl_date
                 carried_forward.append(prev)
 
         if carried_forward:
             logger.info(
                 f"[LOG-OBS: ASSORTMENT_RETENTION] Retained {len(carried_forward)} unavailable store-assortment "
-                f"products indefinitely from previous catalog (original crawl_dates preserved)."
+                f"products indefinitely from previous catalog (including items with missing UPC; original crawl_dates preserved)."
             )
 
         merged = fresh_records + carried_forward
@@ -182,20 +206,33 @@ class StorageManager:
         store_id: str,
         staging_filepath: str,
         total_categories_expected: int,
-        categories_processed: int
+        categories_processed: int,
+        canary_verified: bool = True
     ) -> bool:
         """
         Validates the run and performs an atomic swap to data/output/walmart_scraped_data_{store_id}_latest.json.
-        CRITICAL RULE: Never overwrites last successful dataset with an empty or incomplete run.
+        CRITICAL RULES:
+        - Never overwrites last successful dataset with an empty or incomplete run.
+        - Requires successful canary product verification.
+        - Requires exact 100% required-route completion.
+        - Stops publication if previous catalog cannot be read.
         """
         records = self.load_staging_records(staging_filepath)
         total_count = len(records)
         target_output = os.path.join(self.output_dir, f"walmart_scraped_data_store_{store_id}_latest.json")
         backup_output = os.path.join(self.output_dir, f"walmart_scraped_data_store_{store_id}_backup.json")
 
-        logger.info(f"Validating dataset: {total_count} records collected. Categories processed: {categories_processed}/{total_categories_expected}")
+        logger.info(f"Validating dataset: {total_count} records collected. Categories processed: {categories_processed}/{total_categories_expected}, Canary: {canary_verified}")
 
-        # Quality check: Ensure minimum records threshold is met
+        # Quality check 1: Canary product verification gate
+        if not canary_verified:
+            logger.error(
+                "ABORTING DATASET COMMIT: Canary product verification check failed. "
+                "Publication blocked to prevent dummy or invalid shelf data publication."
+            )
+            return False
+
+        # Quality check 2: Ensure minimum records threshold is met
         if total_count < self.min_records_threshold:
             logger.error(
                 f"ABORTING DATASET COMMIT: Record count ({total_count}) is below required "
@@ -203,7 +240,7 @@ class StorageManager:
             )
             return False
 
-        # Category coverage check: Strict 100% category coverage required in production
+        # Category coverage check 3: Strict 100% category coverage required in production
         if total_categories_expected > 0 and categories_processed < total_categories_expected:
             logger.error(
                 f"ABORTING DATASET COMMIT: Incomplete category coverage ({categories_processed}/{total_categories_expected}). "
@@ -213,8 +250,13 @@ class StorageManager:
 
         # Indefinite Store Assortment Retention:
         # Merge unavailable/unobserved products from previous catalog, retaining original crawl_date
-        records, retained_count = self.merge_indefinite_store_assortment(records, target_output)
-        total_count = len(records)
+        # Stops publication if previous catalog cannot be read
+        try:
+            records, retained_count = self.merge_indefinite_store_assortment(records, target_output)
+            total_count = len(records)
+        except Exception as e:
+            logger.critical(f"ABORTING DATASET COMMIT: Store assortment retention failed: {e}")
+            return False
 
         # Safe Atomic Swap:
         # 1. Write the new dataset to a temporary file first
