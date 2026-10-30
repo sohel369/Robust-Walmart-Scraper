@@ -156,27 +156,51 @@ class WalmartProductionScraper:
                         subcat_had_failure = True
                         break
 
-                    # Parse page records
+                    # Parse page records with source store verification enforced
                     page_records: List[WalmartProductRecord] = self.parser.parse_page(
                         html_content=html_content,
                         category=cat,
                         sub_category=sub_cat,
                         location_info=location,
-                        seen_keys=seen_keys
+                        seen_keys=seen_keys,
+                        enforce_store_validation=True
                     )
 
-                    # Check yield and thin response warning
-                    self.anti_bot.check_yield(cat, sub_cat, len(page_records))
+                    raw_count = self.parser.last_raw_items_count
+                    pagination_info = self.parser.last_pagination_info
+                    total_pages = pagination_info.get("total_pages")
 
-                    if not page_records:
-                        logger.info(f"No more products found on page {page_num} for {subcat_key}. Ending pagination.")
+                    # Check yield and thin response warning on source raw count
+                    self.anti_bot.check_yield(cat, sub_cat, raw_count)
+
+                    # Separate raw page yield from newly retained rows:
+                    # End pagination ONLY when source payload itself has 0 items or source markers indicate completion
+                    if raw_count == 0:
+                        logger.info(f"Source returned 0 raw items on page {page_num} for {subcat_key}. Ending pagination.")
                         break
 
-                    # Write to staging immediately
+                    # Write new verified records to staging
+                    new_retained_count = 0
                     for r in page_records:
                         self.storage.write_staging_record(staging_filepath, r.to_ordered_dict())
                         total_records_collected += 1
                         subcat_records_count += 1
+                        new_retained_count += 1
+
+                    if new_retained_count == 0:
+                        logger.info(
+                            f"Page {page_num} for {subcat_key} yielded {raw_count} raw items, but 0 new unique rows "
+                            f"(all already seen or filtered). Continuing traversal to next page."
+                        )
+
+                    # Check source end-of-catalog markers
+                    if total_pages is not None and page_num >= total_pages:
+                        logger.info(f"Source pagination complete: reached page {page_num}/{total_pages} for {subcat_key}.")
+                        break
+
+                    if pagination_info.get("has_next_page") is False:
+                        logger.info(f"Source pagination has_next_page is False for {subcat_key}. Ending traversal.")
+                        break
 
                     page_num += 1
 
@@ -206,15 +230,21 @@ class WalmartProductionScraper:
         runtime_seconds = round(time.time() - start_time, 2)
         staging_records = self.storage.load_staging_records(staging_filepath)
 
-        # Check Canary Product
-        self.anti_bot.verify_canary_product(staging_records)
+        # Check Canary Product - return value MUST be enforced before publication
+        canary_ok = self.anti_bot.verify_canary_product(staging_records)
+        if not canary_ok:
+            logger.error(
+                "CANARY VALIDATION FAILED: Required staple canary product missing from staging dataset. "
+                "Publication blocked to ensure live shelf integrity."
+            )
 
-        # Atomic commit to production
+        # Atomic commit to production - requires successful canary and exact 100% route completion
         is_committed = self.storage.commit_dataset_atomic(
             store_id=store_id,
             staging_filepath=staging_filepath,
             total_categories_expected=total_subcategories,
-            categories_processed=processed_categories_count
+            categories_processed=processed_categories_count,
+            canary_verified=canary_ok
         )
 
         # Compute audit statistics
