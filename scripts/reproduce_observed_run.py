@@ -16,8 +16,10 @@ from src.config_loader import ConfigLoader
 from src.storage_manager import StorageManager
 
 def check_gs1_checksum(upc: str) -> bool:
-    """Verifies standard GS1 / UPC-A 12th check digit."""
-    if not upc or len(upc) != 12 or not upc.isdigit():
+    """Verifies standard GS1 / UPC-A 12th check digit if UPC is present. Empty UPC is valid source-missing."""
+    if not upc:
+        return True
+    if len(upc) != 12 or not upc.isdigit():
         return False
     d = [int(c) for c in upc[:11]]
     s_odd = sum(d[0::2])

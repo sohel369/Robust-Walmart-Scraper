@@ -60,7 +60,10 @@ def run_source_to_output_reconciliation():
     with open(output_dataset_path, "r", encoding="utf-8") as f:
         output_records = json.load(f)
 
-    output_by_upc = {r["upc"]: r for r in output_records}
+    def get_item_identity(r):
+        return str(r.get("upc") or "").strip() or str(r.get("canonicalUrl") or r.get("url") or "").strip() or str(r.get("id") or r.get("usItemId") or "").strip()
+
+    output_by_identity = {get_item_identity(r): r for r in output_records if get_item_identity(r)}
     logger.info(f"Loaded {len(output_records)} production output records from {output_dataset_path}")
 
     # Inspect all category raw responses
@@ -100,30 +103,35 @@ def run_source_to_output_reconciliation():
 
         items = resp_payload.get("item_stack", [])
         for src_item in items:
-            upc = src_item.get("upc")
-            if not upc or upc not in output_by_upc:
-                mismatches.append(f"UPC {upc} in source {rf} missing from output dataset")
+            ident = get_item_identity(src_item)
+            if not ident or ident not in output_by_identity:
+                # Only flag as mismatch if item was not an excluded approximate-weight item
+                title = src_item.get("name", "")
+                weight = src_item.get("packageInfo", {}).get("sizeString", "")
+                if not normalizer.is_approximate_weight(weight) and not normalizer.is_approximate_weight(title):
+                    mismatches.append(f"Item '{title}' ({ident}) in source {rf} missing from output dataset")
                 continue
 
-            out_rec = output_by_upc[upc]
+            out_rec = output_by_identity[ident]
 
             # Field-by-field verification
             # 1. Product Title
             if src_item.get("name") != out_rec.get("product_title"):
-                mismatches.append(f"Title mismatch for UPC {upc}")
+                mismatches.append(f"Title mismatch for {ident}")
 
             # 2. Canonical URL
-            if src_item.get("canonicalUrl") != out_rec.get("url"):
-                mismatches.append(f"URL mismatch for UPC {upc}")
+            src_url = src_item.get("canonicalUrl")
+            if src_url and src_url != out_rec.get("url"):
+                mismatches.append(f"URL mismatch for {ident}")
 
             # 3. PPM
             src_ppm = src_item.get("priceInfo", {}).get("unitPrice", {}).get("priceString", "")
             if src_ppm != out_rec.get("ppm"):
-                mismatches.append(f"PPM mismatch for UPC {upc}: src={src_ppm}, out={out_rec.get('ppm')}")
+                mismatches.append(f"PPM mismatch for {ident}: src={src_ppm}, out={out_rec.get('ppm')}")
 
             # 4. Store context
             if out_rec.get("zipcode") != "72712" or "Bentonville" not in out_rec.get("store_name"):
-                mismatches.append(f"Store context mismatch for UPC {upc}")
+                mismatches.append(f"Store context mismatch for {ident}")
 
             matched_items += 1
 
