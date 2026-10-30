@@ -81,7 +81,7 @@ class BrowserEngine:
         ]
         try:
             self._context.add_cookies(cookies)
-            logger.info(f"Store context verified: ZIP={zipcode}, StoreID={store_id}, Intent=PICKUP")
+            logger.info(f"Store context configured in session: ZIP={zipcode}, StoreID={store_id}, Intent=PICKUP (verification deferred to source response)")
         except Exception as e:
             logger.warning(f"Failed to set store context cookies: {e}")
 
