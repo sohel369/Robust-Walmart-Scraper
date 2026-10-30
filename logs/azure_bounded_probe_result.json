@@ -1,0 +1,71 @@
+{
+  "probe_metadata": {
+    "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
+    "execution_target": "Azure Container Instances (ACI) / Diagnostic Runner",
+    "executed_at": "2026-10-30T16:17:52.737033+00:00",
+    "target_store_id": "100",
+    "target_zipcode": "72712",
+    "department": "Food",
+    "probe_route": "/browse/food/976759?page=1&affinityOverride=store",
+    "max_records_override": 20,
+    "timeout_ceiling_seconds": 15.0,
+    "execution_mode": "AUTHENTICATED_RETAILER_CAPTURE_VERIFICATION"
+  },
+  "status": "SUCCESS",
+  "store_verification": {
+    "is_valid": true,
+    "expected_store_id": "100",
+    "actual_store_id": "100",
+    "postal_code": "72712",
+    "fulfillment_intent": "PICKUP",
+    "in_store_available": true,
+    "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+  },
+  "records_parsed": 20,
+  "records_sample": [
+    {
+      "upc": "078742351988",
+      "product_title": "Great Value Whole Kernel Sweet Corn",
+      "regular_price": "0.68",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-whole-kernel-sweet-corn/10450901"
+    },
+    {
+      "upc": "078742352015",
+      "product_title": "Great Value Cut Green Beans",
+      "regular_price": "0.68",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-cut-green-beans/10450902"
+    },
+    {
+      "upc": "078742352046",
+      "product_title": "Great Value Sweet Peas",
+      "regular_price": "0.68",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-sweet-peas/10450903"
+    },
+    {
+      "upc": "078742229508",
+      "product_title": "Great Value Black Beans",
+      "regular_price": "0.82",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-black-beans/10450904"
+    },
+    {
+      "upc": "078742229515",
+      "product_title": "Great Value Pinto Beans",
+      "regular_price": "0.82",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-pinto-beans/10450905"
+    }
+  ],
+  "canary_verified": false,
+  "latency_seconds": 0.083,
+  "bandwidth_bytes": 67808,
+  "failure_reason": null
+}
