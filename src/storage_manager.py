@@ -92,20 +92,34 @@ class StorageManager:
     def restore_checkpoint_rows(self, store_id: str, current_staging_filepath: str) -> int:
         """
         Restores previously collected rows from an interrupted run into current staging.
-        Performs strict ID-level deduplication to prevent duplicate rows across repeat resumes,
-        using consistent genuine identity across UPCs, URLs, and item IDs.
+        Binds resume state strictly to an active incomplete run (if checkpoint metadata is
+        absent, previous run state was retired and stale rows will not be restored).
+        Performs multi-key deduplication across UPC, URL, and item ID.
         """
+        cp_path = self.get_checkpoint_path(store_id)
+        if not os.path.exists(cp_path):
+            # Checkpoint metadata was retired upon verified run completion
+            return 0
+
         rows_path = self.get_checkpoint_rows_path(store_id)
         restored = 0
         if not os.path.exists(rows_path):
             return restored
 
-        existing_keys = set()
+        existing_upcs = set()
+        existing_urls = set()
+        existing_ids = set()
+
         if os.path.exists(current_staging_filepath):
             for r in self.load_staging_records(current_staging_filepath):
-                key = self.get_record_identity(r)
-                if key:
-                    existing_keys.add(key)
+                if r.get("upc"):
+                    existing_upcs.add(str(r["upc"]).strip())
+                url = str(r.get("url") or r.get("canonicalUrl") or "").strip()
+                if url:
+                    existing_urls.add(url)
+                item_id = str(r.get("id") or r.get("product_id") or r.get("usItemId") or "").strip()
+                if item_id:
+                    existing_ids.add(item_id)
 
         with open(rows_path, "r", encoding="utf-8") as src, open(current_staging_filepath, "a", encoding="utf-8") as dst:
             for line in src:
@@ -114,26 +128,41 @@ class StorageManager:
                     continue
                 try:
                     record = json.loads(line_str)
-                    key = self.get_record_identity(record)
-                    if key and key in existing_keys:
+                    r_upc = str(record.get("upc") or "").strip()
+                    r_url = str(record.get("url") or record.get("canonicalUrl") or "").strip()
+                    r_id = str(record.get("id") or record.get("product_id") or record.get("usItemId") or "").strip()
+
+                    # Deduplicate across any matching genuine identity
+                    if (r_upc and r_upc in existing_upcs) or (r_url and r_url in existing_urls) or (r_id and r_id in existing_ids):
                         continue
-                    if key:
-                        existing_keys.add(key)
+
+                    if r_upc:
+                        existing_upcs.add(r_upc)
+                    if r_url:
+                        existing_urls.add(r_url)
+                    if r_id:
+                        existing_ids.add(r_id)
+
                     dst.write(line_str + "\n")
                     restored += 1
                 except json.JSONDecodeError:
                     continue
 
         logger.info(
-            f"Restored {restored} unique previously collected rows from checkpoint into {current_staging_filepath}."
+            f"Restored {restored} unique previously collected rows from active checkpoint into {current_staging_filepath}."
         )
         return restored
 
     def clear_checkpoint(self, store_id: str) -> None:
-        """Removes checkpoint file after a completely successful run."""
+        """Removes all checkpoint state (metadata and rows snapshot) after a verified successful run."""
         cp_path = self.get_checkpoint_path(store_id)
-        if os.path.exists(cp_path):
-            os.remove(cp_path)
+        rows_path = self.get_checkpoint_rows_path(store_id)
+        for p in [cp_path, rows_path, f"{cp_path}.tmp", f"{rows_path}.tmp"]:
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                except Exception as e:
+                    logger.warning(f"Could not remove checkpoint file {p}: {e}")
 
     def write_staging_record(self, staging_filepath: str, record_dict: Dict[str, Any]) -> None:
         """Appends a single record to the staging file (JSON lines format)."""
@@ -166,8 +195,8 @@ class StorageManager:
         no current pickup offer or price; keep carried observation dates/values distinct from fresh evidence.'
         
         Preserves historical products missing from fresh crawl while maintaining their original crawl_date.
-        Uses consistent genuine product identity (UPC or stable URL/item_id) so products with missing UPC
-        are never dropped.
+        Reconciles genuine identities across transitions (e.g. historical blank UPC -> fresh populated UPC)
+        without creating duplicate records.
         CRITICAL: Stops publication if the previous catalog exists but cannot be read.
         """
         if not os.path.exists(existing_target_filepath):
@@ -183,19 +212,34 @@ class StorageManager:
             )
             raise RuntimeError(f"Cannot read previous catalog for assortment retention: {e}")
 
-        fresh_identities = {self.get_record_identity(r) for r in fresh_records if self.get_record_identity(r)}
+        fresh_upcs = {str(r.get("upc")).strip() for r in fresh_records if r.get("upc")}
+        fresh_urls = {str(r.get("url") or r.get("canonicalUrl")).strip() for r in fresh_records if (r.get("url") or r.get("canonicalUrl"))}
+        fresh_ids = {str(r.get("id") or r.get("product_id") or r.get("usItemId")).strip() for r in fresh_records if (r.get("id") or r.get("product_id") or r.get("usItemId"))}
+
         carried_forward = []
 
         for prev in previous_records:
-            prev_id = self.get_record_identity(prev)
-            if prev_id and prev_id not in fresh_identities:
+            prev_upc = str(prev.get("upc") or "").strip()
+            prev_url = str(prev.get("url") or prev.get("canonicalUrl") or "").strip()
+            prev_id = str(prev.get("id") or prev.get("product_id") or prev.get("usItemId") or "").strip()
+
+            # Check if this product was observed in the fresh crawl under ANY genuine identity
+            is_in_fresh = False
+            if prev_upc and prev_upc in fresh_upcs:
+                is_in_fresh = True
+            elif prev_url and prev_url in fresh_urls:
+                is_in_fresh = True
+            elif prev_id and prev_id in fresh_ids:
+                is_in_fresh = True
+
+            if not is_in_fresh:
                 # Retain unavailable store-assortment product indefinitely with original historical crawl_date
                 carried_forward.append(prev)
 
         if carried_forward:
             logger.info(
                 f"[LOG-OBS: ASSORTMENT_RETENTION] Retained {len(carried_forward)} unavailable store-assortment "
-                f"products indefinitely from previous catalog (including items with missing UPC; original crawl_dates preserved)."
+                f"products indefinitely from previous catalog (original historical crawl_dates preserved)."
             )
 
         merged = fresh_records + carried_forward

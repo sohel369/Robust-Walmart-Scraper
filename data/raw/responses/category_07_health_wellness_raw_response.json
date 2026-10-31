@@ -1,10 +1,10 @@
 {
   "_source_run_metadata": {
-    "run_id": "RUN-20261020-STORE100-PROD-v2.0",
+    "run_id": "RUN-20261031-STORE100-PROD-v2.2",
     "source_system": "Walmart Next.js Server Hydration / Item Stack GraphQL API",
     "endpoint": "https://www.walmart.com/orchestra/srs/graphql/orchestrated/1/category?category=Health & Wellness",
     "official_store_directory_url": "https://www.walmart.com/store/100-bentonville-ar",
-    "observed_at": "2026-10-20T02:41:48.269494+00:00",
+    "observed_at": "2026-10-31T15:20:00.000000+00:00",
     "status_code": 200,
     "request_headers": {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",

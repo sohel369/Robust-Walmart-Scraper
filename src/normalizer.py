@@ -112,8 +112,9 @@ class DataNormalizer:
         """
         Classifies promotions into Volume Deals vs Digital Deals independently,
         allowing a combined volume promotion plus digital coupon to populate both fields.
-        Preserves each offer and its quantity/clipping/eligibility/limit/validity terms
+        Preserves each offer and its complete quantity/clipping/eligibility/limit/validity terms
         without treating savings/cashback/coupon-discounts as payable prices.
+        Packaging labels alone (Family Pack, Value Pack) remain normal product identities.
         Returns:
             (volume_deals_description, volume_deals_price, digital_deals_description, digital_deals_price)
         """
@@ -123,65 +124,104 @@ class DataNormalizer:
         if not combined_text:
             return ("", "", "", "")
 
+        # RULE: Packaging labels alone (e.g. 'Family Pack', 'Family Size', 'Value Pack', 'Twin Pack')
+        # remain normal packaging identities, NOT promotions.
+        packaging_only_pattern = re.compile(
+            r'^(?:family\s+(?:pack|size)|value\s+(?:pack|size)|mega\s+(?:pack|size)|twin\s+pack|club\s+(?:pack|size))$',
+            re.IGNORECASE
+        )
+        if packaging_only_pattern.match(combined_text):
+            return ("", "", "", "")
+
         vol_desc = ""
         vol_price = ""
         dig_desc = ""
         dig_price = ""
 
-        # 1. Volume Deals Extraction
+        # Check for Digital Deal presence
+        dig_match = self.digital_deal_pattern.search(combined_text)
+        is_dig = bool(dig_match)
+
+        # Check for Volume Deal presence
+        vol_match = self.volume_deal_pattern.search(combined_text)
         is_vol = bool(
-            self.volume_deal_pattern.search(combined_text) or
+            vol_match or
             ("for $" in combined_text.lower()) or
             ("bogo" in combined_text.lower())
         )
-        if is_vol:
-            vol_match = self.volume_deal_pattern.search(combined_text)
-            if vol_match:
-                vol_desc = vol_match.group(0).strip()
-                if desc and desc not in vol_desc and not self.digital_deal_pattern.search(desc):
-                    vol_desc = f"{vol_desc} ({desc})"
-            elif "for $" in combined_text.lower() or "bogo" in combined_text.lower():
-                vol_desc = badge if ("for $" in badge.lower() or "bogo" in badge.lower()) else combined_text
 
-            # Extract payable bundle price if explicitly specified (e.g. '2 for $5' -> '5.00')
+        # 1. Volume Deals Extraction with complete terms preservation
+        if is_vol:
+            if is_dig and dig_match:
+                # If both are combined in the text, partition cleanly so neither loses its terms
+                # Check if badge is volume and desc is digital (or vice-versa)
+                if self.volume_deal_pattern.search(badge) and self.digital_deal_pattern.search(desc):
+                    vol_desc = badge
+                elif self.digital_deal_pattern.search(badge) and self.volume_deal_pattern.search(desc):
+                    vol_desc = desc
+                else:
+                    # Combined within one string: extract the volume portion before digital coupon
+                    d_start = dig_match.start()
+                    vol_part = combined_text[:d_start].strip(" ;.,-")
+                    vol_desc = vol_part if vol_part else (vol_match.group(0).strip() if vol_match else "")
+            else:
+                # Pure volume deal: preserve full combined text (including limits, members only, validity)
+                vol_desc = combined_text
+
+            # Extract payable bundle price only if explicitly specified (e.g. '2 for $5' -> '5.00')
             price_in_vol = re.search(r'for\s+\$?(\d+(?:\.\d{2})?)', vol_desc, re.I)
             if price_in_vol:
                 vol_price = self.clean_price(price_in_vol.group(1))
-            elif displayed_promo_price and not self.digital_deal_pattern.search(combined_text):
+            elif displayed_promo_price and not is_dig:
                 vol_price = self.clean_price(displayed_promo_price)
 
-        # 2. Digital Deals Extraction
-        is_dig = bool(self.digital_deal_pattern.search(combined_text))
+        # 2. Digital Deals Extraction with complete clipping & validity terms
         if is_dig:
-            dig_match = self.digital_deal_pattern.search(combined_text)
-            if dig_match:
-                if self.digital_deal_pattern.search(desc):
+            if is_vol and dig_match:
+                if self.digital_deal_pattern.search(desc) and not self.digital_deal_pattern.search(badge):
                     dig_desc = desc
-                elif self.digital_deal_pattern.search(badge):
+                elif self.digital_deal_pattern.search(badge) and not self.digital_deal_pattern.search(desc):
                     dig_desc = badge
                 else:
-                    dig_desc = dig_match.group(0).strip()
+                    # Extract from digital match to end of string to preserve validity/expiry terms
+                    d_start = dig_match.start()
+                    dig_desc = combined_text[d_start:].strip(" ;.,-")
+            else:
+                dig_desc = combined_text
 
-            # Preserve clipping/quantity/limit/validity terms
+            # CRITICAL RULE (Reviewer Point 4):
+            # 'Save $2 with digital coupon' must NOT become digital_deals_price='2.00'.
+            # Savings, dollar-off, percent-off, or cashback MUST NOT be treated as a payable price.
+            # Leave payable price empty when only savings are supplied.
             clean_promo = self.clean_price(displayed_promo_price)
-            savings_match = re.search(r'save\s+\$?(\d+(?:\.\d{2})?)', dig_desc, re.I)
-            off_match = re.search(r'\$?(\d+(?:\.\d{2})?)\s+off', dig_desc, re.I)
-            with_coupon_price = re.search(r'\$?(\d+(?:\.\d{2})?)\s+with\s+(?:digital\s+)?coupon', dig_desc, re.I)
+            savings_match = re.search(r'save\s+\$?(\d+(?:\.\d{2})?)', dig_desc, re.IGNORECASE)
+            off_match = re.search(r'\$?(\d+(?:\.\d{2})?)\s+off', dig_desc, re.IGNORECASE)
+
+            savings_amount = ""
+            if savings_match:
+                savings_amount = self.clean_price(savings_match.group(1))
+            elif off_match:
+                savings_amount = self.clean_price(off_match.group(1))
+
+            # Check if text explicitly states an actual payable price (NOT savings)
+            with_coupon_price = re.search(
+                r'(?<!save\s)(?<!save\s\$)(?<!take\s)(?<!get\s)\$(\d+(?:\.\d{2})?)\s+with\s+(?:digital\s+)?coupon',
+                dig_desc,
+                re.IGNORECASE
+            )
 
             if with_coupon_price:
                 dig_price = self.clean_price(with_coupon_price.group(1))
             elif clean_promo:
-                # Disallow treating pure dollar-off savings as payable price
-                is_pure_savings = False
-                if savings_match and self.clean_price(savings_match.group(1)) == clean_promo:
-                    is_pure_savings = True
-                if off_match and self.clean_price(off_match.group(1)) == clean_promo:
-                    is_pure_savings = True
-
-                # If promo price is already used by volume deal, do not duplicate into digital price
-                if not is_pure_savings and not (is_vol and clean_promo == vol_price):
-                    if not self.cashback_pattern.search(dig_desc):
-                        dig_price = clean_promo
+                # If clean_promo is the savings/discount amount, do NOT treat it as payable price
+                if savings_amount and clean_promo == savings_amount:
+                    dig_price = ""
+                elif not is_vol and not self.cashback_pattern.search(dig_desc):
+                    # Genuine payable price distinct from savings amount
+                    dig_price = clean_promo
+            else:
+                # Only savings supplied -> payable price must remain empty string
+                dig_price = ""
 
         # 3. Cash Back / Walmart Cash Check
         if self.cashback_pattern.search(combined_text) and not self.digital_deal_pattern.search(combined_text):

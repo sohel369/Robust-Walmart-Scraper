@@ -63,7 +63,7 @@
         "gupc": "",
         "ppm": "$0.04/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       },
       {
         "zipcode": "72712",
@@ -87,7 +87,7 @@
         "gupc": "",
         "ppm": "$0.05/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       },
       {
         "zipcode": "72712",
@@ -111,7 +111,7 @@
         "gupc": "",
         "ppm": "$0.05/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       }
     ],
     "volume_deals": [
@@ -137,7 +137,7 @@
         "gupc": "",
         "ppm": "$0.05/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       },
       {
         "zipcode": "72712",
@@ -161,7 +161,7 @@
         "gupc": "",
         "ppm": "$0.05/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       },
       {
         "zipcode": "72712",
@@ -185,7 +185,7 @@
         "gupc": "",
         "ppm": "$0.12/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       }
     ],
     "digital_deals": [
@@ -211,7 +211,7 @@
         "gupc": "",
         "ppm": "$0.08/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       },
       {
         "zipcode": "72712",
@@ -235,7 +235,7 @@
         "gupc": "",
         "ppm": "$0.08/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       },
       {
         "zipcode": "72712",
@@ -259,7 +259,7 @@
         "gupc": "",
         "ppm": "$0.13/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       }
     ],
     "no_deals": [
@@ -285,7 +285,7 @@
         "gupc": "",
         "ppm": "$0.04/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       },
       {
         "zipcode": "72712",
@@ -309,7 +309,7 @@
         "gupc": "",
         "ppm": "$0.05/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       },
       {
         "zipcode": "72712",
@@ -333,7 +333,7 @@
         "gupc": "",
         "ppm": "$0.05/oz",
         "unit_price": "",
-        "crawl_date": "2026-10-19"
+        "crawl_date": "2026-10-31"
       }
     ]
   },

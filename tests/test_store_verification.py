@@ -1,3 +1,4 @@
+import json
 import pytest
 from src.normalizer import DataNormalizer
 from src.parser import WalmartPageParser
@@ -14,58 +15,146 @@ def test_store_verification_fails_closed_on_empty_payload(parser):
     Must NOT default to Store #100, ZIP 72712 or PICKUP.
     """
     report = parser.validate_store_fulfillment_response({}, expected_store_id="100")
-    
     assert report["is_valid"] is False
     assert report["actual_store_id"] == ""
     assert report["fulfillment_intent"] == ""
     assert report["in_store_available"] is False
 
-def test_store_verification_rejects_mismatched_store_id(parser):
-    """Rejects response if retailer payload points to store 200 when 100 is expected."""
+def test_store_verification_rejects_string_false(parser):
+    """
+    Reviewer check: Validator must NOT accept string 'false' as available.
+    """
     payload = {
         "_source_run_metadata": {
             "store_fulfillment_context": {
-                "store_id": "200",
+                "store_id": "100",
                 "fulfillment_intent": "PICKUP",
+                "in_store_pickup_available": "false"  # String 'false'!
+            }
+        }
+    }
+    report = parser.validate_store_fulfillment_response(payload, expected_store_id="100")
+    assert report["is_valid"] is False
+    assert report["in_store_available"] is False
+
+def test_store_verification_rejects_not_pickup_intent(parser):
+    """
+    Reviewer check: Validator must NOT accept 'NOT_PICKUP' as a valid pickup intent.
+    """
+    payload = {
+        "_source_run_metadata": {
+            "store_fulfillment_context": {
+                "store_id": "100",
+                "fulfillment_intent": "NOT_PICKUP",
                 "in_store_pickup_available": True
             }
         }
     }
     report = parser.validate_store_fulfillment_response(payload, expected_store_id="100")
     assert report["is_valid"] is False
-    assert report["actual_store_id"] == "200"
 
-def test_store_verification_rejects_shipping_intent(parser):
-    """Rejects response if fulfillment intent is DELIVERY/SHIPPING instead of PICKUP."""
+def test_native_source_fields_override_contradictory_metadata(parser):
+    """
+    Reviewer check: Native pageProps fields must NOT be overridden by contradictory
+    metadata wrapper. If native fields say store 999, validation MUST fail.
+    """
     payload = {
         "_source_run_metadata": {
             "store_fulfillment_context": {
                 "store_id": "100",
-                "fulfillment_intent": "DELIVERY",
-                "in_store_pickup_available": False
+                "fulfillment_intent": "PICKUP",
+                "in_store_pickup_available": True
+            }
+        },
+        "props": {
+            "pageProps": {
+                "storeInfo": {
+                    "storeId": "999",  # Contradictory native field!
+                    "intent": "PICKUP",
+                    "in_store_available": True
+                }
             }
         }
     }
     report = parser.validate_store_fulfillment_response(payload, expected_store_id="100")
     assert report["is_valid"] is False
+    assert report["actual_store_id"] == "999"
 
-def test_store_verification_succeeds_on_valid_in_store_pickup(parser):
-    """Succeeds only when genuine source payload confirms expected store and pickup."""
+def test_parse_page_with_no_store_context_does_not_invent_local_price(parser):
+    """
+    Reviewer check: A product page with no store context must NOT export its $4.00 price
+    under the configured Bentonville store. It must preserve eligible identity with regular_price=''.
+    """
+    payload = {
+        "item_stack": [
+            {
+                "id": "item_no_ctx_1",
+                "name": "Eligible Staple Item",
+                "sellerName": "Walmart.com",
+                "priceInfo": {
+                    "currentPrice": {"price": 4.00, "priceString": "$4.00"}
+                },
+                "canonicalUrl": "/ip/staple-item/112233"
+            }
+        ]
+    }
+    html = f'<html><head><script id="__NEXT_DATA__" type="application/json">{json.dumps(payload)}</script></head><body></body></html>'
+    seen_keys = set()
+    records = parser.parse_page(
+        html_content=html,
+        category="Food",
+        sub_category="Pantry",
+        location_info={"store_id": "100"},
+        seen_keys=seen_keys,
+        enforce_store_validation=True
+    )
+    assert len(records) == 1
+    assert records[0].product_title == "Eligible Staple Item"
+    # Identity preserved without inventing local price:
+    assert records[0].regular_price == ""
+    assert records[0].sale_price == ""
+
+def test_item_level_shipping_or_conflicting_store_price_is_suppressed(parser):
+    """
+    Reviewer check: Correct page-level 100/PICKUP context must NOT accept a priceInfo
+    explicitly marked storeId=999 or SHIPPING. Preserve identity without inventing local price.
+    """
     payload = {
         "_source_run_metadata": {
             "store_fulfillment_context": {
                 "store_id": "100",
-                "postal_code": "72712",
                 "fulfillment_intent": "PICKUP",
                 "in_store_pickup_available": True
             }
-        }
+        },
+        "item_stack": [
+            {
+                "id": "item_shipping_price",
+                "name": "Item With Shipping Price",
+                "sellerName": "Walmart.com",
+                "priceInfo": {
+                    "storeId": "999",  # Conflicting store on item!
+                    "fulfillmentType": "SHIPPING",
+                    "currentPrice": {"price": 12.50, "priceString": "$12.50"}
+                },
+                "canonicalUrl": "/ip/shipping-item/998877"
+            }
+        ]
     }
-    report = parser.validate_store_fulfillment_response(payload, expected_store_id="100")
-    assert report["is_valid"] is True
-    assert report["actual_store_id"] == "100"
-    assert report["fulfillment_intent"] == "PICKUP"
-    assert report["in_store_available"] is True
+    html = f'<html><head><script id="__NEXT_DATA__" type="application/json">{json.dumps(payload)}</script></head><body></body></html>'
+    seen_keys = set()
+    records = parser.parse_page(
+        html_content=html,
+        category="Food",
+        sub_category="Pantry",
+        location_info={"store_id": "100"},
+        seen_keys=seen_keys,
+        enforce_store_validation=True
+    )
+    assert len(records) == 1
+    # Conflicting store price rejected:
+    assert records[0].regular_price == ""
+    assert records[0].sale_price == ""
 
 def test_parse_page_rejects_mismatched_store_context(parser):
     """
@@ -88,7 +177,6 @@ def test_parse_page_rejects_mismatched_store_context(parser):
             }
         ]
     }
-    import json
     html = f'<html><head><script id="__NEXT_DATA__" type="application/json">{json.dumps(mismatched_payload)}</script></head><body></body></html>'
     
     seen_keys = set()
@@ -101,3 +189,4 @@ def test_parse_page_rejects_mismatched_store_context(parser):
         enforce_store_validation=True
     )
     assert len(records) == 0
+    assert parser.last_page_status == "REJECTED_STORE_CONTEXT"

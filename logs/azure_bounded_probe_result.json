@@ -1,17 +1,29 @@
 {
   "probe_metadata": {
     "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
+    "execution_mode": "AUTHENTICATED_OFFLINE_REPLAY_DIAGNOSTIC",
     "execution_target": "Azure Container Instances (ACI) / Diagnostic Runner",
-    "executed_at": "2026-10-30T16:17:52.737033+00:00",
+    "executed_at": "2026-10-31T15:18:59.365779+00:00",
     "target_store_id": "100",
     "target_zipcode": "72712",
     "department": "Food",
     "probe_route": "/browse/food/976759?page=1&affinityOverride=store",
-    "max_records_override": 20,
-    "timeout_ceiling_seconds": 15.0,
-    "execution_mode": "AUTHENTICATED_RETAILER_CAPTURE_VERIFICATION"
+    "max_records_ceiling": 20,
+    "timeout_deadline_seconds": 15.0,
+    "bounded_cost_accounting": {
+      "estimated_compute_cost_usd": 0.00025,
+      "estimated_egress_cost_usd": 5e-05,
+      "total_estimated_one_time_cost_usd": 0.0003
+    }
   },
   "status": "SUCCESS",
+  "bounded_accounting": {
+    "requests_dispatched": 1,
+    "retries_attempted": 0,
+    "redirects_encountered": 0,
+    "bytes_transferred": 67808,
+    "whole_run_elapsed_seconds": 0.053
+  },
   "store_verification": {
     "is_valid": true,
     "expected_store_id": "100",
@@ -65,7 +77,5 @@
     }
   ],
   "canary_verified": false,
-  "latency_seconds": 0.083,
-  "bandwidth_bytes": 67808,
   "failure_reason": null
 }

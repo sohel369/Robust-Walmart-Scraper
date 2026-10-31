@@ -19,17 +19,32 @@ class WalmartPageParser:
         self.last_raw_items_count: int = 0
         self.last_pagination_info: Dict[str, Any] = {}
         self.last_store_validation: Dict[str, Any] = {}
+        self.last_page_status: str = "INITIALIZED"
 
     def validate_store_fulfillment_response(self, response_data: Dict[str, Any], expected_store_id: str = "100") -> Dict[str, Any]:
         """
         Validates actual store identity and pickup fulfillment directly from
         the retailer response payload, rather than relying on cookie assertions.
-        Strictly fails closed: returns is_valid=False if context is missing or mismatched.
+        Strictly fails closed: returns is_valid=False if context is missing, invalid, or mismatched.
+        Native source fields take strict precedence over _source_run_metadata wrapper.
         """
-        fulfillment_ctx = response_data.get("_source_run_metadata", {}).get("store_fulfillment_context", {})
-        if not fulfillment_ctx:
-            page_props = response_data.get("props", {}).get("pageProps", {})
-            fulfillment_ctx = page_props.get("storeInfo") or page_props.get("fulfillmentContext") or {}
+        if not isinstance(response_data, dict):
+            return {
+                "is_valid": False,
+                "expected_store_id": str(expected_store_id),
+                "actual_store_id": "",
+                "postal_code": "",
+                "fulfillment_intent": "",
+                "in_store_available": False,
+                "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+            }
+
+        # Check native pageProps store context first (native source fields must not be overridden by wrapper)
+        page_props = response_data.get("props", {}).get("pageProps", {}) if isinstance(response_data.get("props"), dict) else {}
+        native_ctx = page_props.get("storeInfo") or page_props.get("fulfillmentContext") or {}
+        metadata_ctx = response_data.get("_source_run_metadata", {}).get("store_fulfillment_context", {})
+
+        fulfillment_ctx = native_ctx if native_ctx else metadata_ctx
 
         # Strictly extract without falling back to expected store or defaults
         raw_store_id = fulfillment_ctx.get("store_id") or fulfillment_ctx.get("storeId")
@@ -41,16 +56,36 @@ class WalmartPageParser:
 
         actual_store_id = str(raw_store_id).strip() if raw_store_id is not None else ""
         intent = str(raw_intent).upper().strip() if raw_intent is not None else ""
-        in_store = bool(raw_in_store) if raw_in_store is not None else False
         postal_code = str(raw_postal_code).strip() if raw_postal_code is not None else ""
+
+        # Validate types and exact modality
+        # in_store: boolean check (string 'false' is strictly False, string 'true' is True)
+        in_store = False
+        if raw_in_store is not None:
+            if isinstance(raw_in_store, str):
+                in_store = raw_in_store.strip().lower() in ("true", "1", "yes")
+            elif isinstance(raw_in_store, bool):
+                in_store = raw_in_store
+            elif isinstance(raw_in_store, (int, float)):
+                in_store = bool(raw_in_store)
+
+        # Modality: MUST be strictly PICKUP (reject NOT_PICKUP, NO_PICKUP, SHIPPING, DELIVERY)
+        is_exact_pickup = False
+        if intent:
+            if "NOT" in intent or "NO_" in intent or "NON" in intent:
+                is_exact_pickup = False
+            elif intent in ("PICKUP", "STORE_PICKUP", "IN_STORE_PICKUP", "CURBSIDE_PICKUP"):
+                is_exact_pickup = True
+            elif intent.startswith("PICKUP"):
+                is_exact_pickup = True
 
         # FAIL CLOSED: All essential store fulfillment fields must exist and match expected context
         has_context = bool(actual_store_id and intent and (raw_in_store is not None))
         is_valid = (
             has_context and
             (actual_store_id == str(expected_store_id)) and
-            ("PICKUP" in intent) and
-            in_store
+            is_exact_pickup and
+            (in_store is True)
         )
         validation_report = {
             "is_valid": is_valid,
@@ -176,30 +211,64 @@ class WalmartPageParser:
         """
         results: List[WalmartProductRecord] = []
         raw_items: List[Dict[str, Any]] = []
+        expected_store = str(location_info.get("store_id", "100"))
+        page_store_verified = False
 
         # Attempt Next.js payload parsing first
         next_data = self.parse_next_data(html_content)
         if next_data:
-            # 1. Enforce store fulfillment verification on actual source response
-            expected_store = str(location_info.get("store_id", "100"))
             val_report = self.validate_store_fulfillment_response(next_data, expected_store_id=expected_store)
             self.last_store_validation = val_report
 
-            # If response explicitly contains store context that mismatches or fails verification, reject
-            if enforce_store_validation and val_report.get("actual_store_id") and not val_report["is_valid"]:
+            # If response explicitly contains a conflicting/mismatched store context:
+            if val_report.get("actual_store_id") and val_report["actual_store_id"] != expected_store:
                 logger.error(
-                    f"Rejecting page products: source store response mismatch. "
+                    f"Rejecting page products: store response mismatch. "
                     f"Expected Store #{expected_store}, got #{val_report.get('actual_store_id')} ({val_report.get('fulfillment_intent')})"
                 )
+                self.last_page_status = "REJECTED_STORE_CONTEXT"
                 self.last_raw_items_count = 0
                 self.last_pagination_info = {}
                 return []
+
+            if val_report["is_valid"]:
+                page_store_verified = True
+                self.last_page_status = "VALID"
+            else:
+                # Missing or incomplete store context
+                self.last_page_status = "UNVERIFIED_STORE_CONTEXT"
 
             raw_items = self.extract_items_from_json(next_data)
 
         # Fallback to HTML DOM parsing if Next.js data is absent
         if not raw_items:
             soup = BeautifulSoup(html_content, "html.parser")
+            dom_store_id = ""
+            
+            # Check DOM for store indicators
+            store_elem = soup.select_one("[data-store-id], meta[name='store'], [data-automation-id='store-info']")
+            if store_elem:
+                dom_store_id = str(store_elem.get("data-store-id") or store_elem.get("content") or "").strip()
+
+            if dom_store_id and dom_store_id != expected_store:
+                logger.error(f"Rejecting DOM page: store mismatch (expected #{expected_store}, got #{dom_store_id})")
+                self.last_page_status = "REJECTED_STORE_CONTEXT"
+                self.last_raw_items_count = 0
+                return []
+
+            dom_verified = (dom_store_id == expected_store)
+            val_report = {
+                "is_valid": dom_verified,
+                "expected_store_id": expected_store,
+                "actual_store_id": dom_store_id,
+                "fulfillment_intent": "PICKUP" if dom_verified else "",
+                "in_store_available": dom_verified,
+                "validation_source": "DOM_INSPECTION"
+            }
+            self.last_store_validation = val_report
+            page_store_verified = dom_verified
+            self.last_page_status = "VALID" if page_store_verified else "UNVERIFIED_STORE_CONTEXT"
+
             dom_cards = soup.select("[data-item-id]")
             for card in dom_cards:
                 title_elem = card.select_one("[data-automation-id='product-title'], span.w_iUH7")
@@ -223,7 +292,7 @@ class WalmartPageParser:
         self.last_pagination_info = self.extract_pagination_info(html_content, next_data)
         logger.info(
             f"Extracted {len(raw_items)} raw candidate items from page for {category} -> {sub_category} "
-            f"(Pagination markers: {self.last_pagination_info})"
+            f"(Store verified: {page_store_verified}, Status: {self.last_page_status})"
         )
 
         for item in raw_items:
@@ -254,41 +323,64 @@ class WalmartPageParser:
                 logger.debug(f"Excluding product with approximate weight: {title} ({weight})")
                 continue
 
-            # 5. Pricing
+            # 5. Pricing & Item-level context validation
             price_info = item.get("priceInfo", {}) or {}
+            item_store = str(price_info.get("storeId") or price_info.get("store_id") or item.get("storeId") or "").strip()
+            item_fulfillment = str(price_info.get("fulfillmentType") or price_info.get("fulfillment") or item.get("fulfillmentType") or "").upper()
+
+            has_conflicting_price_store = bool(item_store and item_store != expected_store)
+            is_shipping_only_price = ("SHIPPING" in item_fulfillment and "PICKUP" not in item_fulfillment) or ("SHIPPING_ONLY" in item_fulfillment)
+
+            # CRITICAL RULE (Reviewer Point 1):
+            # Only export local store prices if the page-level store context is strictly verified
+            # AND the item's own priceInfo does not conflict with expected store or specify shipping-only.
+            # Otherwise preserve eligible unavailable identity with empty price values ("").
+            can_export_local_price = page_store_verified and not has_conflicting_price_store and not is_shipping_only_price
+
             curr_price_obj = price_info.get("currentPrice", {}) or {}
             was_price_obj = price_info.get("wasPrice", {}) or {}
 
             curr_price_str = curr_price_obj.get("priceString") or str(curr_price_obj.get("price") or "")
             was_price_str = was_price_obj.get("priceString") or str(was_price_obj.get("price") or "")
 
-            cleaned_curr_price = self.normalizer.clean_price(curr_price_str)
-            cleaned_was_price = self.normalizer.clean_price(was_price_str)
+            if can_export_local_price:
+                cleaned_curr_price = self.normalizer.clean_price(curr_price_str)
+                cleaned_was_price = self.normalizer.clean_price(was_price_str)
 
-            if cleaned_was_price and cleaned_was_price != cleaned_curr_price:
-                regular_price = cleaned_was_price
-                sale_price = cleaned_curr_price
+                if cleaned_was_price and cleaned_was_price != cleaned_curr_price:
+                    regular_price = cleaned_was_price
+                    sale_price = cleaned_curr_price
+                else:
+                    regular_price = cleaned_curr_price
+                    sale_price = ""
+
+                # 6. PPM (Price Per Measure) - Scraped directly, never computed
+                raw_ppm = (
+                    curr_price_obj.get("unitPrice") or
+                    price_info.get("unitPrice", {}).get("priceString") or
+                    item.get("unitPriceString") or
+                    ""
+                )
+                ppm = self.normalizer.extract_ppm(str(raw_ppm))
+
+                # 7. Deals Classification (Volume vs Digital)
+                badge_text = str(item.get("badge", {}).get("text") or item.get("offerBadge") or "")
+                deal_desc = str(item.get("dealDescription") or "")
+                promo_price_disp = str(item.get("promoPrice") or "")
+
+                vol_desc, vol_price, dig_desc, dig_price = self.normalizer.parse_deals(
+                    badge_text, deal_desc, promo_price_disp
+                )
             else:
-                regular_price = cleaned_curr_price
+                # Unverified store or conflicting priceInfo: preserve identity with empty price values
+                regular_price = ""
                 sale_price = ""
-
-            # 6. PPM (Price Per Measure) - Scraped directly, never computed
-            raw_ppm = (
-                curr_price_obj.get("unitPrice") or
-                price_info.get("unitPrice", {}).get("priceString") or
-                item.get("unitPriceString") or
-                ""
-            )
-            ppm = self.normalizer.extract_ppm(str(raw_ppm))
-
-            # 7. Deals Classification (Volume vs Digital)
-            badge_text = str(item.get("badge", {}).get("text") or item.get("offerBadge") or "")
-            deal_desc = str(item.get("dealDescription") or "")
-            promo_price_disp = str(item.get("promoPrice") or "")
-
-            vol_desc, vol_price, dig_desc, dig_price = self.normalizer.parse_deals(
-                badge_text, deal_desc, promo_price_disp
-            )
+                ppm = ""
+                badge_text = str(item.get("badge", {}).get("text") or item.get("offerBadge") or "")
+                deal_desc = str(item.get("dealDescription") or "")
+                vol_desc, _, dig_desc, _ = self.normalizer.parse_deals(badge_text, deal_desc, "")
+                vol_price = ""
+                dig_price = ""
 
             # 8. URLs and Identifiers
             canonical_url = str(item.get("canonicalUrl") or item.get("productUrl") or "")
@@ -301,9 +393,9 @@ class WalmartPageParser:
             # Preserve genuine source UPC only; strictly avoid constructing replacements from item IDs
             upc = raw_upc if (raw_upc.isdigit() and len(raw_upc) in (10, 11, 12, 13, 14)) else ""
 
-            # 9. Deduplication check (URL / Item ID / UPC)
-            item_id = str(item.get("usItemId") or item.get("id") or "").strip()
-            dedup_key = upc if upc else (item_id if item_id else canonical_url)
+            # 9. Deduplication check (Consistent fallback order: UPC -> URL -> ID -> Title)
+            item_id = str(item.get("usItemId") or item.get("id") or item.get("productId") or "").strip()
+            dedup_key = upc if upc else (canonical_url if canonical_url else (item_id if item_id else title))
             if not dedup_key or dedup_key in seen_keys:
                 continue
             seen_keys.add(dedup_key)

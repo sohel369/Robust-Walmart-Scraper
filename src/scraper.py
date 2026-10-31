@@ -4,6 +4,7 @@ import time
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Set, List
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 from .config_loader import ConfigLoader
 from .normalizer import DataNormalizer
@@ -129,7 +130,16 @@ class WalmartProductionScraper:
                         logger.info(f"Reached page limit {max_pages} for {subcat_key}.")
                         break
 
-                    page_url = f"{base_url}?page={page_num}&affinityOverride=store" if page_num > 1 else f"{base_url}?affinityOverride=store"
+                    # Properly construct query parameters using urllib (handles existing ?povid=... gracefully)
+                    parsed_base = urlparse(base_url)
+                    query_params = parse_qs(parsed_base.query, keep_blank_values=True)
+                    if page_num > 1:
+                        query_params["page"] = [str(page_num)]
+                    else:
+                        query_params.pop("page", None)
+                    query_params["affinityOverride"] = ["store"]
+                    new_query = urlencode(query_params, doseq=True)
+                    page_url = urlunparse(parsed_base._replace(query=new_query))
                     
                     html_content = ""
                     success = False
@@ -166,6 +176,16 @@ class WalmartProductionScraper:
                         enforce_store_validation=True
                     )
 
+                    # CRITICAL (Reviewer Point 2): Distinguish rejected/error pages from end-of-catalog!
+                    # If page was rejected by parser (e.g. wrong store context), mark route incomplete
+                    if self.parser.last_page_status == "REJECTED_STORE_CONTEXT":
+                        logger.error(
+                            f"Page {page_num} on {page_url} was strictly REJECTED due to store context mismatch. "
+                            f"Marking route [{subcat_key}] INCOMPLETE to prevent invalid publication."
+                        )
+                        subcat_had_failure = True
+                        break
+
                     raw_count = self.parser.last_raw_items_count
                     pagination_info = self.parser.last_pagination_info
                     total_pages = pagination_info.get("total_pages")
@@ -173,10 +193,9 @@ class WalmartProductionScraper:
                     # Check yield and thin response warning on source raw count
                     self.anti_bot.check_yield(cat, sub_cat, raw_count)
 
-                    # Separate raw page yield from newly retained rows:
-                    # End pagination ONLY when source payload itself has 0 items or source markers indicate completion
+                    # End pagination ONLY when source payload itself has verified 0 items (genuine end of catalog)
                     if raw_count == 0:
-                        logger.info(f"Source returned 0 raw items on page {page_num} for {subcat_key}. Ending pagination.")
+                        logger.info(f"Verified end of catalog on page {page_num} for {subcat_key} (0 source items).")
                         break
 
                     # Write new verified records to staging
