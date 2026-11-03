@@ -3,20 +3,89 @@
     "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
     "execution_mode": "AUTHENTICATED_OFFLINE_REPLAY_DIAGNOSTIC",
     "execution_target": "Azure Container Instances (ACI) / Diagnostic Runner",
-    "executed_at": "2026-11-03T06:15:11.070526+00:00",
+    "executed_at": "2026-11-03T13:27:40.516843+00:00",
     "target_store_id": "100",
     "target_zipcode": "72712",
     "department": "Food",
     "probe_route": "/browse/food/976759?page=1&affinityOverride=store",
-    "max_records_ceiling": 20,
-    "timeout_deadline_seconds": 0.001
+    "max_records_ceiling": 5,
+    "timeout_deadline_seconds": 15.0,
+    "bounded_cost_accounting": {
+      "estimated_compute_cost_usd": 0.00025,
+      "estimated_egress_cost_usd": 5e-05,
+      "total_estimated_one_time_cost_usd": 0.0003
+    }
   },
-  "status": "DEADLINE_EXCEEDED",
-  "failure_reason": "Whole-run outer process deadline of 0.001s exceeded; process tree forcefully terminated.",
+  "status": "SUCCESS",
   "bounded_accounting": {
-    "whole_run_elapsed_seconds": 0.163
+    "accounting_mode": "OFFLINE_REPLAY",
+    "live_requests_dispatched": 0,
+    "live_retries_attempted": 0,
+    "live_redirects_encountered": 0,
+    "live_bytes_transferred": 0,
+    "cached_bytes_read": 67808,
+    "whole_run_elapsed_seconds": 0.058
   },
-  "records_parsed": 0,
-  "records_sample": [],
-  "canary_verified": false
+  "response_capture_evidence": {
+    "evidence_file": "logs\\probe_response_capture_evidence.json",
+    "capture_sha256": "7a7274062b6394e3bc2cd6d8fa93208964ab42c18dcf5348bff30f40a6eadf02",
+    "byte_length": 67808,
+    "endpoint_url": "https://www.walmart.com/browse/food/976759?page=1&affinityOverride=store",
+    "store_id_lineage": "100",
+    "fulfillment_intent_lineage": "PICKUP"
+  },
+  "store_verification": {
+    "is_valid": true,
+    "expected_store_id": "100",
+    "actual_store_id": "100",
+    "postal_code": "72712",
+    "fulfillment_intent": "PICKUP",
+    "in_store_available": true,
+    "validation_source": "DIRECT_RESPONSE_BODY_AUDIT"
+  },
+  "records_parsed": 5,
+  "records_sample": [
+    {
+      "upc": "078742351988",
+      "product_title": "Great Value Whole Kernel Sweet Corn",
+      "regular_price": "0.68",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-whole-kernel-sweet-corn/10450901"
+    },
+    {
+      "upc": "078742352015",
+      "product_title": "Great Value Cut Green Beans",
+      "regular_price": "0.68",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-cut-green-beans/10450902"
+    },
+    {
+      "upc": "078742352046",
+      "product_title": "Great Value Sweet Peas",
+      "regular_price": "0.68",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-sweet-peas/10450903"
+    },
+    {
+      "upc": "078742229508",
+      "product_title": "Great Value Black Beans",
+      "regular_price": "0.82",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-black-beans/10450904"
+    },
+    {
+      "upc": "078742229515",
+      "product_title": "Great Value Pinto Beans",
+      "regular_price": "0.82",
+      "sale_price": "",
+      "store_brand": "yes",
+      "url": "https://www.walmart.com/ip/great-value-pinto-beans/10450905"
+    }
+  ],
+  "canary_verified": true,
+  "failure_reason": null
 }

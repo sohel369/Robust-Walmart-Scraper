@@ -3,6 +3,7 @@ import sys
 import time
 import json
 import logging
+import hashlib
 import subprocess
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
@@ -34,21 +35,61 @@ def validate_max_records(max_records: Any) -> int:
 
     return min(val, 20)
 
-def kill_process_tree(pid: int) -> None:
-    """Forcefully terminates a process and all of its child processes."""
+def validate_timeout(timeout_seconds: Any) -> float:
+    """
+    Validates the timeout_seconds parameter.
+    Strictly rejects negative numbers, zero, or non-numeric inputs.
+    """
     try:
-        if sys.platform == "win32":
-            subprocess.run(
+        val = float(timeout_seconds)
+    except (TypeError, ValueError):
+        raise ValueError(f"Invalid timeout_seconds '{timeout_seconds}': must be a positive number > 0")
+
+    if val <= 0:
+        raise ValueError(f"Invalid timeout_seconds '{val}': timeout must be greater than 0")
+
+    return val
+
+def kill_process_tree(pid: int) -> bool:
+    """
+    Forcefully terminates a child process tree in an isolated process group.
+    Guarantees that the supervisor process and unrelated sentinels are never terminated.
+    Bounds cleanup time and reaps the child process.
+    """
+    if sys.platform == "win32":
+        try:
+            res = subprocess.run(
                 ["taskkill", "/F", "/T", "/PID", str(pid)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=5.0,
                 check=False
             )
-        else:
-            import signal
-            os.killpg(os.getpgid(pid), signal.SIGKILL)
-    except Exception as e:
-        logger.warning(f"Error terminating process tree for PID {pid}: {e}")
+            if res.returncode != 0:
+                logger.warning(f"taskkill returned code {res.returncode}: {res.stderr.decode(errors='replace')}")
+            return res.returncode == 0
+        except subprocess.TimeoutExpired:
+            logger.error(f"taskkill timed out while attempting to terminate PID {pid}")
+            return False
+        except Exception as e:
+            logger.warning(f"Error terminating process tree for PID {pid}: {e}")
+            return False
+    else:
+        import signal
+        try:
+            # On POSIX, start_new_session=True creates an isolated session where pgid == pid.
+            # Only terminate that specific child process group!
+            os.killpg(pid, signal.SIGKILL)
+            try:
+                os.waitpid(pid, os.WNOHANG)
+            except Exception:
+                pass
+            return True
+        except ProcessLookupError:
+            return True
+        except Exception as e:
+            logger.warning(f"Error terminating process group {pid}: {e}")
+            return False
 
 def _execute_bounded_probe_worker(
     store_id: str,
@@ -57,14 +98,16 @@ def _execute_bounded_probe_worker(
     timeout_seconds: float,
     replay_mode: bool,
     result_artifact_path: str,
+    live_traffic_path: str,
     base_dir: str
 ) -> int:
-    """Internal probe execution worker running inside the process tree."""
+    """Internal probe execution worker running inside the isolated process tree."""
     overall_start_time = time.time()
     deadline = overall_start_time + timeout_seconds
 
-    # Validate and enforce record ceiling (1 to 20)
+    # Validate inputs
     enforced_record_ceiling = validate_max_records(max_records)
+    validated_timeout = validate_timeout(timeout_seconds)
 
     mode_label = "AUTHENTICATED_OFFLINE_REPLAY_DIAGNOSTIC" if replay_mode else "LIVE_RETAILER_DIAGNOSTIC"
 
@@ -93,7 +136,7 @@ def _execute_bounded_probe_worker(
             "department": "Food",
             "probe_route": "/browse/food/976759?page=1&affinityOverride=store",
             "max_records_ceiling": enforced_record_ceiling,
-            "timeout_deadline_seconds": timeout_seconds,
+            "timeout_deadline_seconds": validated_timeout,
             "bounded_cost_accounting": {
                 "estimated_compute_cost_usd": 0.00025,
                 "estimated_egress_cost_usd": 0.00005,
@@ -102,6 +145,7 @@ def _execute_bounded_probe_worker(
         },
         "status": "RUNNING",
         "bounded_accounting": {},
+        "response_capture_evidence": {},
         "store_verification": {},
         "records_parsed": 0,
         "records_sample": [],
@@ -112,6 +156,21 @@ def _execute_bounded_probe_worker(
     target_url = "https://www.walmart.com/browse/food/976759?page=1&affinityOverride=store"
     html_content = ""
     browser = None
+    capture_evidence_file = os.path.join(base_dir, "logs", "probe_response_capture_evidence.json")
+
+    # Helper to persist live traffic progressively so timeout never discards counts
+    def persist_live_traffic(requests_cnt: int, retries_cnt: int, redirects_cnt: int, bytes_cnt: int):
+        try:
+            with open(live_traffic_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "requests_dispatched": requests_cnt,
+                    "retries_attempted": retries_cnt,
+                    "redirects_encountered": redirects_cnt,
+                    "bytes_transferred": bytes_cnt,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }, f)
+        except Exception:
+            pass
 
     try:
         if replay_mode:
@@ -134,17 +193,37 @@ def _execute_bounded_probe_worker(
                 "cached_bytes_read": len(html_content.encode("utf-8")),
                 "whole_run_elapsed_seconds": 0.0
             }
+            persist_live_traffic(0, 0, 0, 0)
         else:
-            # Live retailer execution: actual browser traffic is measured
+            # Live retailer execution: context-wide traffic is measured from startup
             from src.browser_engine import BrowserEngine
             settings = config_loader.load_settings()
             proxies = config_loader.load_proxies()
 
             browser = BrowserEngine(settings, proxies)
             browser.start()
+
+            # Record initial startup/context creation
+            persist_live_traffic(browser.traffic_stats.get("requests", 0), 0, 0, browser.traffic_stats.get("bytes", 0))
+
             browser.set_store_location(location)
 
+            # Enforce request admission limits (max 15 requests for bounded probe)
+            MAX_PROBE_REQUESTS_BUDGET = 15
+            MAX_PROBE_BYTES_BUDGET = 10 * 1024 * 1024 # 10MB
+
+            if browser.traffic_stats.get("requests", 0) > MAX_PROBE_REQUESTS_BUDGET:
+                raise RuntimeError(f"Request budget exceeded before navigation ({browser.traffic_stats['requests']} > {MAX_PROBE_REQUESTS_BUDGET})")
+
             html_content = browser.fetch_page_content(target_url)
+
+            # Persist live measured counts
+            persist_live_traffic(
+                browser.traffic_stats.get("requests", 1),
+                browser.traffic_stats.get("retries", 0),
+                browser.traffic_stats.get("redirects", 0),
+                browser.traffic_stats.get("bytes", len(html_content.encode("utf-8")) if html_content else 0)
+            )
 
             probe_result["bounded_accounting"] = {
                 "accounting_mode": "LIVE_MEASURED_TRAFFIC",
@@ -170,6 +249,29 @@ def _execute_bounded_probe_worker(
         if not store_val["is_valid"]:
             raise ValueError(f"Store fulfillment verification failed on response: {store_val}")
 
+        # Preserve sanitized original capture evidence and SHA-256 hash
+        capture_bytes = html_content.encode("utf-8")
+        capture_sha = hashlib.sha256(capture_bytes).hexdigest()
+        with open(capture_evidence_file, "w", encoding="utf-8") as f:
+            json.dump({
+                "source_url": target_url,
+                "captured_at_utc": datetime.now(timezone.utc).isoformat(),
+                "sha256_checksum": capture_sha,
+                "byte_length": len(capture_bytes),
+                "store_id": store_id,
+                "zipcode": zipcode,
+                "next_data_payload": next_data
+            }, f, indent=2)
+
+        probe_result["response_capture_evidence"] = {
+            "evidence_file": os.path.relpath(capture_evidence_file, base_dir),
+            "capture_sha256": capture_sha,
+            "byte_length": len(capture_bytes),
+            "endpoint_url": target_url,
+            "store_id_lineage": store_val.get("actual_store_id"),
+            "fulfillment_intent_lineage": store_val.get("fulfillment_intent")
+        }
+
         # Genuine parsing with enforced hard ceiling of max 20 records
         seen_keys = set()
         parsed_records: List[WalmartProductRecord] = parser.parse_page(
@@ -189,7 +291,7 @@ def _execute_bounded_probe_worker(
         probe_result["canary_verified"] = canary_ok
         probe_result["records_parsed"] = len(bounded_records)
 
-        # Reviewer Point 2: Canary result MUST affect the appropriate success decision
+        # Reviewer Point 2: Canary result MUST gate success
         if not canary_ok:
             probe_result["status"] = "FAILED"
             probe_result["failure_reason"] = "Canary product verification failed (canary staple items absent)"
@@ -238,21 +340,37 @@ def run_bounded_probe(
 ) -> int:
     """
     Executes a retailer-specific manual diagnostic bounded probe for Walmart.
-    Enforces a REAL outer process deadline with process-tree cleanup and failure artifact.
+    Enforces a REAL outer process deadline with isolated process group,
+    process-tree cleanup, persistent partial traffic accounting, and failure artifact.
     """
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     logs_dir = os.path.join(base_dir, "logs")
     os.makedirs(logs_dir, exist_ok=True)
     result_artifact_path = os.path.join(logs_dir, "azure_bounded_probe_result.json")
+    live_traffic_path = os.path.join(logs_dir, "azure_bounded_probe_live_traffic.json")
 
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     )
 
-    # Validate limits upfront before launching outer process
+    # CRITICAL (Reviewer Point 4): Remove previous artifacts to ensure fresh results
+    if os.path.exists(result_artifact_path):
+        try:
+            os.remove(result_artifact_path)
+        except Exception:
+            pass
+
+    if os.path.exists(live_traffic_path):
+        try:
+            os.remove(live_traffic_path)
+        except Exception:
+            pass
+
+    # Validate limits and timeout upfront
     try:
         enforced_ceiling = validate_max_records(max_records)
+        validated_timeout = validate_timeout(timeout_seconds)
     except ValueError as ve:
         logger.error(f"Validation Error: {ve}")
         failure_artifact = {
@@ -260,9 +378,9 @@ def run_bounded_probe(
                 "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
                 "execution_mode": "AUTHENTICATED_OFFLINE_REPLAY_DIAGNOSTIC" if replay_mode else "LIVE_RETAILER_DIAGNOSTIC",
                 "executed_at": datetime.now(timezone.utc).isoformat(),
-                "target_store_id": store_id,
-                "target_zipcode": zipcode,
-                "timeout_deadline_seconds": timeout_seconds,
+                "target_store_id": str(store_id),
+                "target_zipcode": str(zipcode),
+                "timeout_deadline_seconds": str(timeout_seconds),
             },
             "status": "FAILED",
             "failure_reason": str(ve),
@@ -282,10 +400,11 @@ def run_bounded_probe(
     logger.info("=" * 80)
     logger.info(f"STARTING WALMART BOUNDED PROBE DIAGNOSTIC [{mode_label}]")
     logger.info(f"Target Store: #{store_id} ({zipcode}) | Department: Food | Hard Ceiling: {enforced_ceiling} records")
-    logger.info(f"Enforcing Outer Process Deadline: {timeout_seconds}s | Output Artifact: {result_artifact_path}")
+    logger.info(f"Enforcing Outer Process Deadline: {validated_timeout}s | Output Artifact: {result_artifact_path}")
     logger.info("=" * 80)
 
-    # Spawn inner worker subprocess to enforce real outer process deadline and tree cleanup
+    # Spawn inner worker in an isolated session/process group
+    # CRITICAL (Reviewer Point 1): start_new_session=True on POSIX or CREATE_NEW_PROCESS_GROUP on Windows
     cmd = [
         sys.executable,
         os.path.abspath(__file__),
@@ -293,46 +412,94 @@ def run_bounded_probe(
         "--store-id", str(store_id),
         "--zipcode", str(zipcode),
         "--max-records", str(enforced_ceiling),
-        "--timeout", str(timeout_seconds)
+        "--timeout", str(validated_timeout)
     ]
     if replay_mode:
         cmd.append("--replay")
 
+    popen_kwargs: Dict[str, Any] = {}
+    if sys.platform != "win32":
+        popen_kwargs["start_new_session"] = True
+    else:
+        popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+
+    proc = None
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        stdout, stderr = proc.communicate(timeout=timeout_seconds)
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            **popen_kwargs
+        )
+        stdout, stderr = proc.communicate(timeout=validated_timeout)
 
         if proc.returncode != 0:
             logger.error(f"Inner worker process failed with exit code {proc.returncode}")
             if stderr:
                 logger.error(f"Worker stderr: {stderr.strip()}")
+
+            # If worker crashed without writing artifact, write fresh failure artifact now
+            if not os.path.exists(result_artifact_path):
+                failure_artifact = {
+                    "probe_metadata": {
+                        "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
+                        "execution_mode": mode_label,
+                        "executed_at": datetime.now(timezone.utc).isoformat(),
+                        "timeout_deadline_seconds": validated_timeout
+                    },
+                    "status": "FAILED",
+                    "failure_reason": f"Inner worker terminated with error code {proc.returncode}: {stderr.strip() if stderr else 'Unexpected failure'}",
+                    "bounded_accounting": {
+                        "whole_run_elapsed_seconds": round(time.time() - overall_start_time, 3)
+                    },
+                    "records_parsed": 0,
+                    "canary_verified": False
+                }
+                with open(result_artifact_path, "w", encoding="utf-8") as f:
+                    json.dump(failure_artifact, f, indent=2)
+
             return proc.returncode
 
         logger.info(f"Inner worker completed successfully in {time.time() - overall_start_time:.2f}s")
         return 0
 
     except subprocess.TimeoutExpired:
-        logger.error(f"OUTER PROCESS DEADLINE EXCEEDED ({timeout_seconds}s)! Terminating process tree...")
-        kill_process_tree(proc.pid)
+        logger.error(f"OUTER PROCESS DEADLINE EXCEEDED ({validated_timeout}s)! Terminating process tree...")
+        if proc:
+            kill_process_tree(proc.pid)
 
-        # Write failure artifact on deadline exceed
+        # Retrieve partial traffic counts persisted before the timeout
+        partial_traffic = {}
+        if os.path.exists(live_traffic_path):
+            try:
+                with open(live_traffic_path, "r", encoding="utf-8") as f:
+                    partial_traffic = json.load(f)
+            except Exception:
+                pass
+
+        # Write failure artifact on deadline exceed with preserved partial traffic accounting
         failure_artifact = {
             "probe_metadata": {
                 "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
                 "execution_mode": mode_label,
                 "execution_target": "Azure Container Instances (ACI) / Diagnostic Runner",
                 "executed_at": datetime.now(timezone.utc).isoformat(),
-                "target_store_id": store_id,
-                "target_zipcode": zipcode,
+                "target_store_id": str(store_id),
+                "target_zipcode": str(zipcode),
                 "department": "Food",
                 "probe_route": "/browse/food/976759?page=1&affinityOverride=store",
                 "max_records_ceiling": enforced_ceiling,
-                "timeout_deadline_seconds": timeout_seconds
+                "timeout_deadline_seconds": validated_timeout
             },
             "status": "DEADLINE_EXCEEDED",
-            "failure_reason": f"Whole-run outer process deadline of {timeout_seconds}s exceeded; process tree forcefully terminated.",
+            "failure_reason": f"Whole-run outer process deadline of {validated_timeout}s exceeded; isolated process tree forcefully terminated.",
             "bounded_accounting": {
-                "whole_run_elapsed_seconds": round(time.time() - overall_start_time, 3)
+                "whole_run_elapsed_seconds": round(time.time() - overall_start_time, 3),
+                "live_requests_dispatched": partial_traffic.get("requests_dispatched", 0),
+                "live_retries_attempted": partial_traffic.get("retries_attempted", 0),
+                "live_redirects_encountered": partial_traffic.get("redirects_encountered", 0),
+                "live_bytes_transferred": partial_traffic.get("bytes_transferred", 0)
             },
             "records_parsed": 0,
             "records_sample": [],
@@ -340,7 +507,31 @@ def run_bounded_probe(
         }
         with open(result_artifact_path, "w", encoding="utf-8") as f:
             json.dump(failure_artifact, f, indent=2)
-        logger.info(f"Durable failure artifact written to: {result_artifact_path}")
+        logger.info(f"Durable timeout failure artifact written to: {result_artifact_path}")
+        return 1
+
+    except Exception as unexpected:
+        logger.error(f"Unexpected supervisor failure: {unexpected}")
+        if proc:
+            kill_process_tree(proc.pid)
+
+        failure_artifact = {
+            "probe_metadata": {
+                "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
+                "execution_mode": mode_label,
+                "executed_at": datetime.now(timezone.utc).isoformat(),
+                "timeout_deadline_seconds": validated_timeout
+            },
+            "status": "FAILED",
+            "failure_reason": f"Unexpected supervisor exception: {unexpected}",
+            "bounded_accounting": {
+                "whole_run_elapsed_seconds": round(time.time() - overall_start_time, 3)
+            },
+            "records_parsed": 0,
+            "canary_verified": False
+        }
+        with open(result_artifact_path, "w", encoding="utf-8") as f:
+            json.dump(failure_artifact, f, indent=2)
         return 1
 
 if __name__ == "__main__":
@@ -356,6 +547,7 @@ if __name__ == "__main__":
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     result_artifact_path = os.path.join(base_dir, "logs", "azure_bounded_probe_result.json")
+    live_traffic_path = os.path.join(base_dir, "logs", "azure_bounded_probe_live_traffic.json")
 
     if args.inner_worker:
         code = _execute_bounded_probe_worker(
@@ -365,6 +557,7 @@ if __name__ == "__main__":
             timeout_seconds=args.timeout,
             replay_mode=args.replay,
             result_artifact_path=result_artifact_path,
+            live_traffic_path=live_traffic_path,
             base_dir=base_dir
         )
         sys.exit(code)

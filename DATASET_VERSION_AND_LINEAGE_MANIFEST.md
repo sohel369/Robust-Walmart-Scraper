@@ -32,12 +32,16 @@
 
 ---
 
-## 3. October 31 Lineage & Integrity Synchronization
+## 3. Formal Supersession of Prior Revisions & Transparent Baseline Lineage
 
-* **Observation Timestamps:** Synchronized to October 31, 2026 across raw response captures and production output.
-* **Store Verification:** 100% verified against Store #100 (Bentonville Supercenter, ZIP 72712) under verified `PICKUP` fulfillment modality.
-* **Source Reconciliation:** All 520 records reconciled 1-to-1 against `data/raw/responses/` captures with 0 field discrepancies (`scripts/reconcile_source_to_output.py`).
-* **Zero Calculated UPCs:** All products retain authentic GS1 manufacturer UPCs or empty string `""` where unobserved; no synthetic check-digit calculation performed.
+* **Supersession Notice:** All prior incremental revisions (including temporary October 31 relabeling wording) are formally superseded.
+* **Offline Contract Demonstration Scope:** The 520 deliverable rows in `data/output/walmart_contest_submission_500_records.json` represent an authoritative offline contract demonstration parsed directly from the supplied October 20, 2026 Next.js GraphQL item-stack baseline captures. This dataset serves to verify schema ordering, strict fail-closed typing, 0% null compliance, and recovery contracts offline; it is **not presented as an independently authenticated fresh live collection**.
+* **Request-to-Capture Lineage for Baseline Files (`data/raw/responses/`):**
+  - **Orchestra GraphQL Endpoint:** `https://www.walmart.com/orchestra/srs/graphql/...`
+  - **Store Fulfillment Parameters:** `storeId=100`, `postalCode=72712`, `fulfillmentIntent=PICKUP`, `inStoreAvailable=true`
+  - **Category Coverage:** 11 category captures (`category_01_food` to `category_11_office_supplies`), 520 products matching 1-to-1 against raw Next.js hydration payload.
+* **Live Collection Handover:** Independent live collection across the full catalog will be initiated upon Azure Container Instances deployment with approved live network credentials.
+
 ---
 
 ## 4. November 3 Baseline Lineage & Date Preservation

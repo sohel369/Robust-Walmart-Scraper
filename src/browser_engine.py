@@ -63,6 +63,22 @@ class BrowserEngine:
             timezone_id="America/Chicago"
         )
 
+        # Context-wide traffic measurement attached BEFORE any navigation or store setup
+        def on_req(req):
+            self.traffic_stats["requests"] += 1
+            if req.is_navigation_request() and req.redirected_from:
+                self.traffic_stats["redirects"] += 1
+
+        def on_res(res):
+            try:
+                b = res.body()
+                self.traffic_stats["bytes"] += len(b)
+            except Exception:
+                pass
+
+        self._context.on("request", on_req)
+        self._context.on("response", on_res)
+
     def set_store_location(self, location: Dict[str, Any]) -> None:
         """
         Configures store and fulfillment context (Store ID, ZIP code, Pickup intent)
@@ -99,23 +115,6 @@ class BrowserEngine:
         time.sleep(delay)
 
         page: Page = self._context.new_page()
-        
-        # Traffic measurement listeners
-        def on_req(req):
-            self.traffic_stats["requests"] += 1
-            if req.is_navigation_request() and req.redirected_from:
-                self.traffic_stats["redirects"] += 1
-
-        def on_res(res):
-            try:
-                b = res.body()
-                self.traffic_stats["bytes"] += len(b)
-            except Exception:
-                pass
-
-        page.on("request", on_req)
-        page.on("response", on_res)
-
         Stealth().apply_stealth_sync(page)
 
         try:

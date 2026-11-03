@@ -250,3 +250,67 @@ def test_dom_fallback_requires_explicit_fulfillment_evidence(parser):
     assert parser.last_store_validation["is_valid"] is True
     assert parser.last_store_validation["fulfillment_intent"] == "PICKUP"
 
+def test_dom_fallback_rejects_negative_wording(parser):
+    """
+    Reviewer Point 3: DOM fulfillment must strictly reject negative wording
+    such as 'pickup unavailable' or 'pickup not available', failing closed.
+    """
+    # 1. Negative wording: "pickup unavailable"
+    html_unavailable = """
+    <html>
+      <head>
+        <meta name="store" content="100">
+      </head>
+      <body>
+        <div data-automation-id="store-fulfillment-badge">Pickup unavailable at Store #100</div>
+        <div data-item-id="card_neg_1">
+          <span data-automation-id="product-title">Eligible Item 1</span>
+          <span data-automation-id="product-price">$9.99</span>
+        </div>
+      </body>
+    </html>
+    """
+    recs_unavail = parser.parse_page(
+        html_content=html_unavailable,
+        category="Food",
+        sub_category="Pantry",
+        location_info={"store_id": "100"},
+        seen_keys=set(),
+        enforce_store_validation=True
+    )
+    assert parser.last_page_status == "UNVERIFIED_STORE_CONTEXT"
+    assert parser.last_store_validation["is_valid"] is False
+    assert len(recs_unavail) == 1
+    # Preserve eligible identity with blank price when fulfillment is unverified/negative
+    assert recs_unavail[0].product_title == "Eligible Item 1"
+    assert recs_unavail[0].regular_price == ""
+
+    # 2. Negative wording: "pickup not available"
+    html_not_avail = """
+    <html>
+      <head>
+        <meta name="store" content="100">
+      </head>
+      <body>
+        <div data-automation-id="fulfillment-badge">In-store pickup not available</div>
+        <div data-item-id="card_neg_2">
+          <span data-automation-id="product-title">Eligible Item 2</span>
+          <span data-automation-id="product-price">$4.50</span>
+        </div>
+      </body>
+    </html>
+    """
+    recs_not_avail = parser.parse_page(
+        html_content=html_not_avail,
+        category="Food",
+        sub_category="Pantry",
+        location_info={"store_id": "100"},
+        seen_keys=set(),
+        enforce_store_validation=True
+    )
+    assert parser.last_page_status == "UNVERIFIED_STORE_CONTEXT"
+    assert parser.last_store_validation["is_valid"] is False
+    assert len(recs_not_avail) == 1
+    assert recs_not_avail[0].regular_price == ""
+
+

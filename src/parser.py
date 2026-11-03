@@ -256,28 +256,35 @@ class WalmartPageParser:
                 self.last_raw_items_count = 0
                 return []
 
-            # Check DOM for actual fulfillment evidence (must not assume PICKUP without source evidence)
+            # Check DOM for actual fulfillment evidence scoped to store/fulfillment context
+            # Must strictly reject negative wording ("pickup unavailable", "not available", etc.)
+            NEGATIVE_FULFILLMENT_PATTERNS = [
+                "unavailable", "not available", "no pickup", "not eligible",
+                "out of stock", "ineligible", "shipping only", "delivery only"
+            ]
+
             fulfillment_elem = soup.select_one(
                 "[data-fulfillment-intent], [data-automation-id='fulfillment-badge'], "
                 "[data-testid='fulfillment-cell'], [data-automation-id='fulfillment-intent'], "
-                "meta[name='fulfillment'], [data-automation-id='pickup-status']"
+                "meta[name='fulfillment'], [data-automation-id='pickup-status'], "
+                "[data-automation-id='store-fulfillment-badge']"
             )
             dom_intent = ""
             dom_in_store = False
+
             if fulfillment_elem:
-                raw_intent_attr = (
+                raw_intent_text = (
                     fulfillment_elem.get("data-fulfillment-intent") or 
                     fulfillment_elem.get("content") or 
-                    fulfillment_elem.get_text(strip=True) or ""
-                ).upper()
-                if "PICKUP" in raw_intent_attr and not any(neg in raw_intent_attr for neg in ("NOT", "NO_", "NON")):
-                    dom_intent = "PICKUP"
-                    dom_in_store = True
-            else:
-                pickup_badge = soup.find(lambda tag: tag.name in ("span", "div", "p") and "pickup" in tag.get_text().lower() and "available" in tag.get_text().lower())
-                if pickup_badge:
-                    dom_intent = "PICKUP"
-                    dom_in_store = True
+                    fulfillment_elem.get_text(separator=" ", strip=True) or ""
+                ).lower()
+
+                has_negative = any(neg in raw_intent_text for neg in NEGATIVE_FULFILLMENT_PATTERNS)
+                if not has_negative:
+                    # Check exact typed intent without page-wide leakage
+                    if "pickup" in raw_intent_text and not any(neg in raw_intent_text for neg in ("not", "no_", "non")):
+                        dom_intent = "PICKUP"
+                        dom_in_store = True
 
             dom_verified = bool(dom_store_id == expected_store and dom_intent == "PICKUP" and dom_in_store)
             val_report = {
