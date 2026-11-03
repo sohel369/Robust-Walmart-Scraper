@@ -38,5 +38,13 @@
 * **Store Verification:** 100% verified against Store #100 (Bentonville Supercenter, ZIP 72712) under verified `PICKUP` fulfillment modality.
 * **Source Reconciliation:** All 520 records reconciled 1-to-1 against `data/raw/responses/` captures with 0 field discrepancies (`scripts/reconcile_source_to_output.py`).
 * **Zero Calculated UPCs:** All products retain authentic GS1 manufacturer UPCs or empty string `""` where unobserved; no synthetic check-digit calculation performed.
+---
+
+## 4. November 3 Baseline Lineage & Date Preservation
+
+* **Authentic Baseline Observation Dates:** Preserved original October 20, 2026 observation timestamps across all 11 raw retailer captures (`data/raw/responses/`) and deliverable records (`data/output/`). Relabeling has been strictly avoided per reviewer guidance; reprocessed and reconciled datasets retain genuine baseline dates.
+* **Specification Simplification (Offer Fields):** Per reviewer instruction, all four volume and digital offer fields (`volume_deals_description`, `volume_deals_price`, `digital_deals_description`, `digital_deals_price`) remain strictly empty strings `""` for Walmart, enforced at the Pydantic model and parser levels.
+* **Source Reconciliation:** All 520 records reconcile 1-to-1 against `data/raw/responses/` captures with 0 field discrepancies (`scripts/reconcile_source_to_output.py`).
 * **Deterministic Verification:** Independent SHA-256 manifest generated in `GIT_PROVENANCE_AND_INTEGRITY.md` and `logs/git_commit_lineage_proof.json`.
+
 

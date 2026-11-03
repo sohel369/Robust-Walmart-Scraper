@@ -82,6 +82,13 @@ py scripts/demonstrate_recovery.py
 ```
 
 ### 5. Run Live Scraper for Store #100
+
+**Full Uncapped Production Traversal (Default):**
+```powershell
+py scripts/run_scraper.py --zipcode 72712
+```
+
+**Demonstration Run Only (Capped at 3 Pages):**
 ```powershell
 py scripts/run_scraper.py --zipcode 72712 --max-pages 3
 ```

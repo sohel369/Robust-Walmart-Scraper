@@ -31,10 +31,18 @@ def test_null_conversion_to_empty_string():
 def test_enforced_empty_gupc_and_unit_price():
     record = WalmartProductRecord(
         gupc="SOME_INVENTED_GUPC",
-        unit_price="0.25"
+        unit_price="0.25",
+        volume_deals_description="2 for $5",
+        volume_deals_price="5.00",
+        digital_deals_description="Save $2",
+        digital_deals_price="2.00"
     )
     assert record.gupc == ""
     assert record.unit_price == ""
+    assert record.volume_deals_description == ""
+    assert record.volume_deals_price == ""
+    assert record.digital_deals_description == ""
+    assert record.digital_deals_price == ""
 
 def test_store_brand_values():
     r1 = WalmartProductRecord(store_brand="yes")

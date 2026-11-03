@@ -44,10 +44,10 @@ class WalmartProductRecord(BaseModel):
             return v.strip()
         return str(v)
 
-    @field_validator("gupc", "unit_price", mode="after")
+    @field_validator("gupc", "unit_price", "volume_deals_description", "volume_deals_price", "digital_deals_description", "digital_deals_price", mode="after")
     @classmethod
     def enforce_empty_fields(cls, v: str) -> str:
-        """Enforces that gupc and unit_price remain empty strings as required."""
+        """Enforces that gupc, unit_price, and Walmart volume/digital offer fields remain empty strings per specification update."""
         return ""
 
     @field_validator("store_brand", mode="after")

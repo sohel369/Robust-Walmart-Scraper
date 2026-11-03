@@ -256,13 +256,36 @@ class WalmartPageParser:
                 self.last_raw_items_count = 0
                 return []
 
-            dom_verified = (dom_store_id == expected_store)
+            # Check DOM for actual fulfillment evidence (must not assume PICKUP without source evidence)
+            fulfillment_elem = soup.select_one(
+                "[data-fulfillment-intent], [data-automation-id='fulfillment-badge'], "
+                "[data-testid='fulfillment-cell'], [data-automation-id='fulfillment-intent'], "
+                "meta[name='fulfillment'], [data-automation-id='pickup-status']"
+            )
+            dom_intent = ""
+            dom_in_store = False
+            if fulfillment_elem:
+                raw_intent_attr = (
+                    fulfillment_elem.get("data-fulfillment-intent") or 
+                    fulfillment_elem.get("content") or 
+                    fulfillment_elem.get_text(strip=True) or ""
+                ).upper()
+                if "PICKUP" in raw_intent_attr and not any(neg in raw_intent_attr for neg in ("NOT", "NO_", "NON")):
+                    dom_intent = "PICKUP"
+                    dom_in_store = True
+            else:
+                pickup_badge = soup.find(lambda tag: tag.name in ("span", "div", "p") and "pickup" in tag.get_text().lower() and "available" in tag.get_text().lower())
+                if pickup_badge:
+                    dom_intent = "PICKUP"
+                    dom_in_store = True
+
+            dom_verified = bool(dom_store_id == expected_store and dom_intent == "PICKUP" and dom_in_store)
             val_report = {
                 "is_valid": dom_verified,
                 "expected_store_id": expected_store,
                 "actual_store_id": dom_store_id,
-                "fulfillment_intent": "PICKUP" if dom_verified else "",
-                "in_store_available": dom_verified,
+                "fulfillment_intent": dom_intent,
+                "in_store_available": dom_in_store,
                 "validation_source": "DOM_INSPECTION"
             }
             self.last_store_validation = val_report
@@ -363,24 +386,14 @@ class WalmartPageParser:
                 )
                 ppm = self.normalizer.extract_ppm(str(raw_ppm))
 
-                # 7. Deals Classification (Volume vs Digital)
-                badge_text = str(item.get("badge", {}).get("text") or item.get("offerBadge") or "")
-                deal_desc = str(item.get("dealDescription") or "")
-                promo_price_disp = str(item.get("promoPrice") or "")
-
-                vol_desc, vol_price, dig_desc, dig_price = self.normalizer.parse_deals(
-                    badge_text, deal_desc, promo_price_disp
-                )
+                # 7. Deals Classification (Walmart Specification Update: All 4 offer fields strictly empty strings)
+                vol_desc, vol_price, dig_desc, dig_price = "", "", "", ""
             else:
                 # Unverified store or conflicting priceInfo: preserve identity with empty price values
                 regular_price = ""
                 sale_price = ""
                 ppm = ""
-                badge_text = str(item.get("badge", {}).get("text") or item.get("offerBadge") or "")
-                deal_desc = str(item.get("dealDescription") or "")
-                vol_desc, _, dig_desc, _ = self.normalizer.parse_deals(badge_text, deal_desc, "")
-                vol_price = ""
-                dig_price = ""
+                vol_desc, vol_price, dig_desc, dig_price = "", "", "", ""
 
             # 8. URLs and Identifiers
             canonical_url = str(item.get("canonicalUrl") or item.get("productUrl") or "")

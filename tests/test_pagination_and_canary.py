@@ -116,3 +116,40 @@ def test_rejected_store_page_prevents_publication(tmp_path):
         canary_verified=True
     )
     assert published is False
+
+def test_unverified_store_page_prevents_publication(tmp_path):
+    """
+    Reviewer Point 3: An unverified store context page (missing context)
+    must NOT establish completed coverage and must block publication.
+    """
+    storage = StorageManager(base_dir=str(tmp_path), min_records_threshold=1)
+    parser = WalmartPageParser(DataNormalizer())
+
+    staging_file = str(tmp_path / "staging_run2.jsonl")
+    storage.write_staging_record(staging_file, {"product_title": "Valid Item", "upc": "10000001"})
+
+    # Empty payload has missing/unverified store context
+    empty_payload = {"item_stack": [{"id": "item1", "name": "Item with no store"}]}
+    html = f'<html><head><script id="__NEXT_DATA__" type="application/json">{json.dumps(empty_payload)}</script></head><body></body></html>'
+
+    records = parser.parse_page(
+        html_content=html,
+        category="Household",
+        sub_category="Paper",
+        location_info={"store_id": "100"},
+        seen_keys=set(),
+        enforce_store_validation=True
+    )
+
+    assert parser.last_page_status == "UNVERIFIED_STORE_CONTEXT"
+
+    # Incomplete coverage (1/2) must block publication
+    published = storage.commit_dataset_atomic(
+        store_id="100",
+        staging_filepath=staging_file,
+        total_categories_expected=2,
+        categories_processed=1,
+        canary_verified=True
+    )
+    assert published is False
+

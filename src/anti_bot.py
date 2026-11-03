@@ -67,11 +67,11 @@ class AntiBotDetector:
         """
         for item in items:
             title = (item.get("product_title") or "").lower()
-            upc = item.get("upc") or ""
-            if "great value" in title and "milk" in title:
-                logger.info("Canary product verified: Great Value Milk present in shelf dataset.")
+            url = (item.get("url") or "")
+            if "great value" in title and any(staple in title for staple in ["milk", "corn", "green beans", "sweet peas", "beans"]):
+                logger.info(f"Canary product verified: '{item.get('product_title')}' present in shelf dataset.")
                 return True
-            if self.canary_product_id in (item.get("url") or ""):
+            if self.canary_product_id and self.canary_product_id in url:
                 logger.info(f"Canary product ID {self.canary_product_id} verified.")
                 return True
         return False

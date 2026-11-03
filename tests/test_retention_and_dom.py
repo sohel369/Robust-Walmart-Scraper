@@ -194,3 +194,59 @@ def test_dom_fallback_retains_unpriced_eligible_products(parser):
     assert rec.regular_price == ""  # Retained with empty source-missing value!
     assert rec.sale_price == ""
     assert "55443322" in rec.url
+
+def test_dom_fallback_requires_explicit_fulfillment_evidence(parser):
+    """
+    Reviewer Point 3: DOM verification must NOT assume PICKUP from store ID alone;
+    it requires actual source evidence of fulfillment.
+    """
+    # HTML with store ID only, but NO fulfillment indicator
+    dom_html_no_fulfillment = """
+    <html>
+      <head><meta name="store" content="100"></head>
+      <body>
+        <div data-item-id="card_1">
+          <span data-automation-id="product-title">Item 1</span>
+        </div>
+      </body>
+    </html>
+    """
+    records = parser.parse_page(
+        html_content=dom_html_no_fulfillment,
+        category="Food",
+        sub_category="Pantry",
+        location_info={"store_id": "100"},
+        seen_keys=set(),
+        enforce_store_validation=True
+    )
+    # Status is UNVERIFIED_STORE_CONTEXT because fulfillment evidence was missing
+    assert parser.last_page_status == "UNVERIFIED_STORE_CONTEXT"
+    assert parser.last_store_validation["is_valid"] is False
+
+    # HTML WITH explicit pickup fulfillment evidence
+    dom_html_with_pickup = """
+    <html>
+      <head>
+        <meta name="store" content="100">
+        <meta name="fulfillment" content="PICKUP">
+      </head>
+      <body>
+        <div data-item-id="card_1">
+          <span data-automation-id="product-title">Item 1</span>
+          <span data-automation-id="product-price">$5.00</span>
+        </div>
+      </body>
+    </html>
+    """
+    records_verified = parser.parse_page(
+        html_content=dom_html_with_pickup,
+        category="Food",
+        sub_category="Pantry",
+        location_info={"store_id": "100"},
+        seen_keys=set(),
+        enforce_store_validation=True
+    )
+    assert parser.last_page_status == "VALID"
+    assert parser.last_store_validation["is_valid"] is True
+    assert parser.last_store_validation["fulfillment_intent"] == "PICKUP"
+

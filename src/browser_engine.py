@@ -25,6 +25,7 @@ class BrowserEngine:
         self._playwright = None
         self._browser: Optional[Browser] = None
         self._context: Optional[BrowserContext] = None
+        self.traffic_stats = {"requests": 0, "redirects": 0, "bytes": 0, "retries": 0}
 
     def start(self) -> None:
         """Starts Playwright and initializes browser context with stealth."""
@@ -98,6 +99,23 @@ class BrowserEngine:
         time.sleep(delay)
 
         page: Page = self._context.new_page()
+        
+        # Traffic measurement listeners
+        def on_req(req):
+            self.traffic_stats["requests"] += 1
+            if req.is_navigation_request() and req.redirected_from:
+                self.traffic_stats["redirects"] += 1
+
+        def on_res(res):
+            try:
+                b = res.body()
+                self.traffic_stats["bytes"] += len(b)
+            except Exception:
+                pass
+
+        page.on("request", on_req)
+        page.on("response", on_res)
+
         Stealth().apply_stealth_sync(page)
 
         try:

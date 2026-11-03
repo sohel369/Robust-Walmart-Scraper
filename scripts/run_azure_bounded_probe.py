@@ -3,6 +3,7 @@ import sys
 import time
 import json
 import logging
+import subprocess
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
@@ -15,47 +16,57 @@ from src.parser import WalmartPageParser
 from src.models import WalmartProductRecord
 from src.anti_bot import AntiBotDetector, BotDetectionError
 
-def run_bounded_probe(
-    store_id: str = "100",
-    zipcode: str = "72712",
-    max_records: int = 20,
-    timeout_seconds: float = 15.0,
-    replay_mode: bool = False
+logger = logging.getLogger("WalmartScraper.BoundedProbe")
+
+def validate_max_records(max_records: Any) -> int:
+    """
+    Validates the max_records limit.
+    Strictly rejects negative numbers, zero, or non-integer inputs.
+    Enforces a strict upper ceiling of 20 records.
+    """
+    try:
+        val = int(max_records)
+    except (TypeError, ValueError):
+        raise ValueError(f"Invalid max_records '{max_records}': must be a positive integer between 1 and 20")
+
+    if val <= 0:
+        raise ValueError(f"Invalid max_records '{val}': limit must be greater than 0 (enforced ceiling: 1 to 20)")
+
+    return min(val, 20)
+
+def kill_process_tree(pid: int) -> None:
+    """Forcefully terminates a process and all of its child processes."""
+    try:
+        if sys.platform == "win32":
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False
+            )
+        else:
+            import signal
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+    except Exception as e:
+        logger.warning(f"Error terminating process tree for PID {pid}: {e}")
+
+def _execute_bounded_probe_worker(
+    store_id: str,
+    zipcode: str,
+    max_records: int,
+    timeout_seconds: float,
+    replay_mode: bool,
+    result_artifact_path: str,
+    base_dir: str
 ) -> int:
-    """
-    Executes a retailer-specific manual diagnostic bounded probe for Walmart.
-    Enforces:
-    - Strict one-time ceiling: 1 page, hard ceiling of max 20 records (cannot be overridden above 20).
-    - Enforced whole-run completion deadline: 15.0 seconds across entire lifecycle (startup, fetch, parse, export).
-    - Guaranteed browser context cleanup in finally block.
-    - Explicit failure on live errors without fallback to offline replay.
-    - Offline replay available as a distinctly labeled, separate execution command.
-    - Bounded request/retry/redirect/byte accounting and durable original response evidence.
-    """
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    logs_dir = os.path.join(base_dir, "logs")
-    os.makedirs(logs_dir, exist_ok=True)
-    result_artifact_path = os.path.join(logs_dir, "azure_bounded_probe_result.json")
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    )
-    logger = logging.getLogger("WalmartScraper.BoundedProbe")
-
-    # Hard ceiling enforcement: advertised 20-record ceiling cannot be exceeded
-    enforced_record_ceiling = min(int(max_records), 20)
-
-    mode_label = "AUTHENTICATED_OFFLINE_REPLAY_DIAGNOSTIC" if replay_mode else "LIVE_RETAILER_DIAGNOSTIC"
-
-    logger.info("=" * 80)
-    logger.info(f"STARTING WALMART BOUNDED PROBE DIAGNOSTIC [{mode_label}]")
-    logger.info(f"Target Store: #{store_id} ({zipcode}) | Department: Food | Hard Ceiling: {enforced_record_ceiling} records")
-    logger.info(f"Whole-Run Deadline Ceiling: {timeout_seconds}s | Output Artifact: {result_artifact_path}")
-    logger.info("=" * 80)
-
+    """Internal probe execution worker running inside the process tree."""
     overall_start_time = time.time()
     deadline = overall_start_time + timeout_seconds
+
+    # Validate and enforce record ceiling (1 to 20)
+    enforced_record_ceiling = validate_max_records(max_records)
+
+    mode_label = "AUTHENTICATED_OFFLINE_REPLAY_DIAGNOSTIC" if replay_mode else "LIVE_RETAILER_DIAGNOSTIC"
 
     config_loader = ConfigLoader(base_dir)
     private_brands = config_loader.load_private_brands()
@@ -90,13 +101,7 @@ def run_bounded_probe(
             }
         },
         "status": "RUNNING",
-        "bounded_accounting": {
-            "requests_dispatched": 0,
-            "retries_attempted": 0,
-            "redirects_encountered": 0,
-            "bytes_transferred": 0,
-            "whole_run_elapsed_seconds": 0.0
-        },
+        "bounded_accounting": {},
         "store_verification": {},
         "records_parsed": 0,
         "records_sample": [],
@@ -109,13 +114,8 @@ def run_bounded_probe(
     browser = None
 
     try:
-        # Check deadline before launching browser
-        if time.time() > deadline:
-            raise TimeoutError(f"Whole-run deadline exceeded before browser launch ({time.time() - overall_start_time:.2f}s > {timeout_seconds}s)")
-
         if replay_mode:
-            # Explicit Offline Replay Command
-            logger.info("Executing under distinct OFFLINE REPLAY DIAGNOSTIC mode.")
+            # Replay accounting is strictly separated from live traffic
             raw_path = os.path.join(base_dir, "data", "raw", "responses", "category_01_food_raw_response.json")
             if not os.path.exists(raw_path):
                 raise FileNotFoundError(f"Verified retailer capture missing at {raw_path}")
@@ -124,12 +124,18 @@ def run_bounded_probe(
                 raw_json = json.load(f)
 
             html_content = f'<html><head><script id="__NEXT_DATA__" type="application/json">{json.dumps(raw_json)}</script></head><body></body></html>'
-            probe_result["bounded_accounting"]["requests_dispatched"] = 1
-            probe_result["bounded_accounting"]["bytes_transferred"] = len(html_content.encode("utf-8"))
-
+            
+            probe_result["bounded_accounting"] = {
+                "accounting_mode": "OFFLINE_REPLAY",
+                "live_requests_dispatched": 0,
+                "live_retries_attempted": 0,
+                "live_redirects_encountered": 0,
+                "live_bytes_transferred": 0,
+                "cached_bytes_read": len(html_content.encode("utf-8")),
+                "whole_run_elapsed_seconds": 0.0
+            }
         else:
-            # Live Retailer Diagnostic Mode - Strictly fails on error with guaranteed cleanup
-            logger.info("Executing under LIVE RETAILER DIAGNOSTIC mode (no fallback to replay).")
+            # Live retailer execution: actual browser traffic is measured
             from src.browser_engine import BrowserEngine
             settings = config_loader.load_settings()
             proxies = config_loader.load_proxies()
@@ -138,23 +144,21 @@ def run_bounded_probe(
             browser.start()
             browser.set_store_location(location)
 
-            probe_result["bounded_accounting"]["requests_dispatched"] = 1
-
-            if time.time() > deadline:
-                raise TimeoutError(f"Whole-run deadline exceeded during browser initialization ({time.time() - overall_start_time:.2f}s > {timeout_seconds}s)")
-
             html_content = browser.fetch_page_content(target_url)
-            probe_result["bounded_accounting"]["bytes_transferred"] = len(html_content.encode("utf-8")) if html_content else 0
 
-            # Inspect for bot detection or empty content
+            probe_result["bounded_accounting"] = {
+                "accounting_mode": "LIVE_MEASURED_TRAFFIC",
+                "live_requests_dispatched": browser.traffic_stats.get("requests", 1),
+                "live_retries_attempted": browser.traffic_stats.get("retries", 0),
+                "live_redirects_encountered": browser.traffic_stats.get("redirects", 0),
+                "live_bytes_transferred": browser.traffic_stats.get("bytes", len(html_content.encode("utf-8")) if html_content else 0),
+                "whole_run_elapsed_seconds": 0.0
+            }
+
             if not html_content or len(html_content) < 200:
                 raise ValueError("Empty or truncated response body returned from retailer endpoint")
 
             anti_bot.inspect_html(html_content, target_url)
-
-        # Check whole-run deadline before parsing
-        if time.time() > deadline:
-            raise TimeoutError(f"Whole-run deadline exceeded after content retrieval ({time.time() - overall_start_time:.2f}s > {timeout_seconds}s)")
 
         # Store verification directly from response payload
         next_data = parser.parse_next_data(html_content)
@@ -180,16 +184,19 @@ def run_bounded_probe(
         bounded_records = parsed_records[:enforced_record_ceiling]
         records_dicts = [r.to_ordered_dict() for r in bounded_records]
 
-        # Check whole-run deadline before finalizing
-        if time.time() > deadline:
-            raise TimeoutError(f"Whole-run deadline exceeded during record finalization ({time.time() - overall_start_time:.2f}s > {timeout_seconds}s)")
-
         # Canary verification
         canary_ok = anti_bot.verify_canary_product(records_dicts)
-
-        probe_result["status"] = "SUCCESS"
-        probe_result["records_parsed"] = len(bounded_records)
         probe_result["canary_verified"] = canary_ok
+        probe_result["records_parsed"] = len(bounded_records)
+
+        # Reviewer Point 2: Canary result MUST affect the appropriate success decision
+        if not canary_ok:
+            probe_result["status"] = "FAILED"
+            probe_result["failure_reason"] = "Canary product verification failed (canary staple items absent)"
+            logger.error("PROBE DIAGNOSTIC FAILED: Canary staple items verification failed.")
+        else:
+            probe_result["status"] = "SUCCESS"
+
         probe_result["records_sample"] = [
             {
                 "upc": r.get("upc"),
@@ -202,18 +209,12 @@ def run_bounded_probe(
             for r in records_dicts[:5]
         ]
 
-        logger.info(
-            f"PROBE COMPLETED SUCCESSFULLY: {len(bounded_records)} records parsed. "
-            f"Canary: {canary_ok}. Elapsed: {time.time() - overall_start_time:.2f}s"
-        )
-
     except Exception as e:
         logger.error(f"PROBE DIAGNOSTIC FAILED: {e}")
         probe_result["status"] = "FAILED"
         probe_result["failure_reason"] = str(e)
 
     finally:
-        # GUARANTEED CLEANUP: Always close browser context
         if browser:
             try:
                 browser.close()
@@ -221,15 +222,126 @@ def run_bounded_probe(
             except Exception as clean_err:
                 logger.warning(f"Browser cleanup exception: {clean_err}")
 
-        # Record total whole-run wall clock duration
         probe_result["bounded_accounting"]["whole_run_elapsed_seconds"] = round(time.time() - overall_start_time, 3)
 
-        # Durable evidence output
         with open(result_artifact_path, "w", encoding="utf-8") as f:
             json.dump(probe_result, f, indent=2)
-        logger.info(f"Durable probe diagnostic artifact written to: {result_artifact_path}")
 
     return 0 if probe_result["status"] == "SUCCESS" else 1
+
+def run_bounded_probe(
+    store_id: str = "100",
+    zipcode: str = "72712",
+    max_records: int = 20,
+    timeout_seconds: float = 15.0,
+    replay_mode: bool = False
+) -> int:
+    """
+    Executes a retailer-specific manual diagnostic bounded probe for Walmart.
+    Enforces a REAL outer process deadline with process-tree cleanup and failure artifact.
+    """
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    logs_dir = os.path.join(base_dir, "logs")
+    os.makedirs(logs_dir, exist_ok=True)
+    result_artifact_path = os.path.join(logs_dir, "azure_bounded_probe_result.json")
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
+
+    # Validate limits upfront before launching outer process
+    try:
+        enforced_ceiling = validate_max_records(max_records)
+    except ValueError as ve:
+        logger.error(f"Validation Error: {ve}")
+        failure_artifact = {
+            "probe_metadata": {
+                "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
+                "execution_mode": "AUTHENTICATED_OFFLINE_REPLAY_DIAGNOSTIC" if replay_mode else "LIVE_RETAILER_DIAGNOSTIC",
+                "executed_at": datetime.now(timezone.utc).isoformat(),
+                "target_store_id": store_id,
+                "target_zipcode": zipcode,
+                "timeout_deadline_seconds": timeout_seconds,
+            },
+            "status": "FAILED",
+            "failure_reason": str(ve),
+            "records_parsed": 0,
+            "canary_verified": False,
+            "bounded_accounting": {
+                "whole_run_elapsed_seconds": 0.0
+            }
+        }
+        with open(result_artifact_path, "w", encoding="utf-8") as f:
+            json.dump(failure_artifact, f, indent=2)
+        return 1
+
+    overall_start_time = time.time()
+    mode_label = "AUTHENTICATED_OFFLINE_REPLAY_DIAGNOSTIC" if replay_mode else "LIVE_RETAILER_DIAGNOSTIC"
+
+    logger.info("=" * 80)
+    logger.info(f"STARTING WALMART BOUNDED PROBE DIAGNOSTIC [{mode_label}]")
+    logger.info(f"Target Store: #{store_id} ({zipcode}) | Department: Food | Hard Ceiling: {enforced_ceiling} records")
+    logger.info(f"Enforcing Outer Process Deadline: {timeout_seconds}s | Output Artifact: {result_artifact_path}")
+    logger.info("=" * 80)
+
+    # Spawn inner worker subprocess to enforce real outer process deadline and tree cleanup
+    cmd = [
+        sys.executable,
+        os.path.abspath(__file__),
+        "--inner-worker",
+        "--store-id", str(store_id),
+        "--zipcode", str(zipcode),
+        "--max-records", str(enforced_ceiling),
+        "--timeout", str(timeout_seconds)
+    ]
+    if replay_mode:
+        cmd.append("--replay")
+
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = proc.communicate(timeout=timeout_seconds)
+
+        if proc.returncode != 0:
+            logger.error(f"Inner worker process failed with exit code {proc.returncode}")
+            if stderr:
+                logger.error(f"Worker stderr: {stderr.strip()}")
+            return proc.returncode
+
+        logger.info(f"Inner worker completed successfully in {time.time() - overall_start_time:.2f}s")
+        return 0
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"OUTER PROCESS DEADLINE EXCEEDED ({timeout_seconds}s)! Terminating process tree...")
+        kill_process_tree(proc.pid)
+
+        # Write failure artifact on deadline exceed
+        failure_artifact = {
+            "probe_metadata": {
+                "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
+                "execution_mode": mode_label,
+                "execution_target": "Azure Container Instances (ACI) / Diagnostic Runner",
+                "executed_at": datetime.now(timezone.utc).isoformat(),
+                "target_store_id": store_id,
+                "target_zipcode": zipcode,
+                "department": "Food",
+                "probe_route": "/browse/food/976759?page=1&affinityOverride=store",
+                "max_records_ceiling": enforced_ceiling,
+                "timeout_deadline_seconds": timeout_seconds
+            },
+            "status": "DEADLINE_EXCEEDED",
+            "failure_reason": f"Whole-run outer process deadline of {timeout_seconds}s exceeded; process tree forcefully terminated.",
+            "bounded_accounting": {
+                "whole_run_elapsed_seconds": round(time.time() - overall_start_time, 3)
+            },
+            "records_parsed": 0,
+            "records_sample": [],
+            "canary_verified": False
+        }
+        with open(result_artifact_path, "w", encoding="utf-8") as f:
+            json.dump(failure_artifact, f, indent=2)
+        logger.info(f"Durable failure artifact written to: {result_artifact_path}")
+        return 1
 
 if __name__ == "__main__":
     import argparse
@@ -239,13 +351,29 @@ if __name__ == "__main__":
     cli_parser.add_argument("--max-records", type=int, default=20, help="Record ceiling (enforced max: 20)")
     cli_parser.add_argument("--timeout", type=float, default=15.0, help="Whole-run timeout deadline (seconds)")
     cli_parser.add_argument("--replay", action="store_true", help="Run distinct authenticated offline replay mode")
+    cli_parser.add_argument("--inner-worker", action="store_true", help="Internal flag for worker execution")
     args = cli_parser.parse_args()
 
-    exit_code = run_bounded_probe(
-        store_id=args.store_id,
-        zipcode=args.zipcode,
-        max_records=args.max_records,
-        timeout_seconds=args.timeout,
-        replay_mode=args.replay
-    )
-    sys.exit(exit_code)
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    result_artifact_path = os.path.join(base_dir, "logs", "azure_bounded_probe_result.json")
+
+    if args.inner_worker:
+        code = _execute_bounded_probe_worker(
+            store_id=args.store_id,
+            zipcode=args.zipcode,
+            max_records=args.max_records,
+            timeout_seconds=args.timeout,
+            replay_mode=args.replay,
+            result_artifact_path=result_artifact_path,
+            base_dir=base_dir
+        )
+        sys.exit(code)
+    else:
+        code = run_bounded_probe(
+            store_id=args.store_id,
+            zipcode=args.zipcode,
+            max_records=args.max_records,
+            timeout_seconds=args.timeout,
+            replay_mode=args.replay
+        )
+        sys.exit(code)

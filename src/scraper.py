@@ -176,12 +176,12 @@ class WalmartProductionScraper:
                         enforce_store_validation=True
                     )
 
-                    # CRITICAL (Reviewer Point 2): Distinguish rejected/error pages from end-of-catalog!
-                    # If page was rejected by parser (e.g. wrong store context), mark route incomplete
-                    if self.parser.last_page_status == "REJECTED_STORE_CONTEXT":
+                    # CRITICAL (Reviewer Point 2 & 3): Distinguish rejected/unverified pages from end-of-catalog!
+                    # Unknown/unverified/rejected pages must not establish completed coverage or trigger end-of-catalog!
+                    if self.parser.last_page_status in ("REJECTED_STORE_CONTEXT", "UNVERIFIED_STORE_CONTEXT") or self.parser.last_page_status != "VALID":
                         logger.error(
-                            f"Page {page_num} on {page_url} was strictly REJECTED due to store context mismatch. "
-                            f"Marking route [{subcat_key}] INCOMPLETE to prevent invalid publication."
+                            f"Page {page_num} on {page_url} returned invalid/unverified status '{self.parser.last_page_status}'. "
+                            f"Marking route [{subcat_key}] INCOMPLETE to strictly prevent unverified or partial publication."
                         )
                         subcat_had_failure = True
                         break
