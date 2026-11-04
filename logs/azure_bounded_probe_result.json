@@ -3,7 +3,7 @@
     "probe_name": "Walmart Bounded Probe Diagnostic (Entry #20 / #37)",
     "execution_mode": "AUTHENTICATED_OFFLINE_REPLAY_DIAGNOSTIC",
     "execution_target": "Azure Container Instances (ACI) / Diagnostic Runner",
-    "executed_at": "2026-11-03T13:27:40.516843+00:00",
+    "executed_at": "2026-11-04T02:41:42.302437+00:00",
     "target_store_id": "100",
     "target_zipcode": "72712",
     "department": "Food",
@@ -24,7 +24,7 @@
     "live_redirects_encountered": 0,
     "live_bytes_transferred": 0,
     "cached_bytes_read": 67808,
-    "whole_run_elapsed_seconds": 0.058
+    "whole_run_elapsed_seconds": 0.05
   },
   "response_capture_evidence": {
     "evidence_file": "logs\\probe_response_capture_evidence.json",

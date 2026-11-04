@@ -14,6 +14,11 @@ class WalmartPageParser:
     rules, filters out marketplace and approximate weights, and produces compliant records.
     """
 
+    NEGATIVE_FULFILLMENT_PATTERNS = (
+        "unavailable", "not available", "no pickup", "not eligible",
+        "out of stock", "ineligible", "shipping only", "delivery only"
+    )
+
     def __init__(self, normalizer: DataNormalizer):
         self.normalizer = normalizer
         self.last_raw_items_count: int = 0
@@ -258,11 +263,6 @@ class WalmartPageParser:
 
             # Check DOM for actual fulfillment evidence scoped to store/fulfillment context
             # Must strictly reject negative wording ("pickup unavailable", "not available", etc.)
-            NEGATIVE_FULFILLMENT_PATTERNS = [
-                "unavailable", "not available", "no pickup", "not eligible",
-                "out of stock", "ineligible", "shipping only", "delivery only"
-            ]
-
             fulfillment_elem = soup.select_one(
                 "[data-fulfillment-intent], [data-automation-id='fulfillment-badge'], "
                 "[data-testid='fulfillment-cell'], [data-automation-id='fulfillment-intent'], "
@@ -279,7 +279,7 @@ class WalmartPageParser:
                     fulfillment_elem.get_text(separator=" ", strip=True) or ""
                 ).lower()
 
-                has_negative = any(neg in raw_intent_text for neg in NEGATIVE_FULFILLMENT_PATTERNS)
+                has_negative = any(neg in raw_intent_text for neg in self.NEGATIVE_FULFILLMENT_PATTERNS)
                 if not has_negative:
                     # Check exact typed intent without page-wide leakage
                     if "pickup" in raw_intent_text and not any(neg in raw_intent_text for neg in ("not", "no_", "non")):
@@ -306,6 +306,16 @@ class WalmartPageParser:
                 link_elem = card.select_one("a[href*='/ip/']")
                 img_elem = card.select_one("img[src*='walmartimages.com']")
                 
+                # Extract item-level fulfillment badges & attributes
+                card_badge = card.select_one(
+                    "[data-automation-id='fulfillment-badge'], [data-automation-id='pickup-status'], "
+                    "[data-testid='item-fulfillment'], .fulfillment-badge, span[data-automation-id='item-fulfillment'], "
+                    "[data-automation-id='fulfillment-title'], [data-testid='fulfillment-cell']"
+                )
+                badge_text = card_badge.get_text(separator=" ", strip=True) if card_badge else ""
+                card_fulfillment_attr = str(card.get("data-fulfillment") or card.get("data-fulfillment-type") or "").strip()
+                card_pickup_avail_attr = card.get("data-pickup-available")
+
                 # Retain eligible products even if price element is missing (source-missing value)
                 if title_elem:
                     price_str = price_elem.get_text(strip=True) if price_elem else ""
@@ -315,7 +325,10 @@ class WalmartPageParser:
                         "priceInfo": {"currentPrice": {"priceString": price_str}},
                         "canonicalUrl": link_elem["href"] if link_elem and link_elem.get("href") else "",
                         "image": img_elem["src"] if img_elem and img_elem.get("src") else "",
-                        "sellerName": "Walmart.com"
+                        "sellerName": "Walmart.com",
+                        "fulfillmentBadge": badge_text,
+                        "fulfillmentType": card_fulfillment_attr,
+                        "inStorePickupAvailable": None if card_pickup_avail_attr is None else (card_pickup_avail_attr.lower() == "true")
                     })
 
         self.last_raw_items_count = len(raw_items)
@@ -331,11 +344,9 @@ class WalmartPageParser:
             if "walmart" not in seller_name.lower():
                 continue # Skip 3rd party marketplace sellers
 
-            # 2. Filter out Shipping-only items (Must be available for Local Pickup / In-Store)
+            # 2. Fulfillment Intent & Availability Scoping
             fulfillment = item.get("fulfillment", {}) or item.get("fulfillmentBadge", "")
-            fulfillment_type = item.get("fulfillmentType") or ""
-            if "shipping_only" in str(fulfillment_type).lower():
-                continue
+            fulfillment_type = str(item.get("fulfillmentType") or "").strip()
 
             # 3. Product Title & Brand
             title = str(item.get("name") or item.get("title") or "").strip()
@@ -353,19 +364,48 @@ class WalmartPageParser:
                 logger.debug(f"Excluding product with approximate weight: {title} ({weight})")
                 continue
 
-            # 5. Pricing & Item-level context validation
+            # 5. Pricing & Item-level context validation (Reviewer check: scoped to product/store offer)
             price_info = item.get("priceInfo", {}) or {}
             item_store = str(price_info.get("storeId") or price_info.get("store_id") or item.get("storeId") or "").strip()
-            item_fulfillment = str(price_info.get("fulfillmentType") or price_info.get("fulfillment") or item.get("fulfillmentType") or "").upper()
+            item_fulfillment = str(price_info.get("fulfillmentType") or price_info.get("fulfillment") or fulfillment_type).upper()
 
             has_conflicting_price_store = bool(item_store and item_store != expected_store)
-            is_shipping_only_price = ("SHIPPING" in item_fulfillment and "PICKUP" not in item_fulfillment) or ("SHIPPING_ONLY" in item_fulfillment)
+            is_shipping_only_price = ("SHIPPING" in item_fulfillment and "PICKUP" not in item_fulfillment) or ("SHIPPING_ONLY" in item_fulfillment) or ("shipping_only" in fulfillment_type.lower())
 
-            # CRITICAL RULE (Reviewer Point 1):
+            # Check item-level fulfillment badges and negative wording scoped to this specific item offer
+            item_fulfillment_text = " ".join(filter(None, [
+                str(item.get("fulfillmentBadge") or ""),
+                str(item.get("fulfillmentTitle") or ""),
+                str(item.get("fulfillmentText") or ""),
+                str(item.get("itemFulfillmentBadge") or ""),
+                str(item.get("fulfillmentBadgeText") or ""),
+                str(item.get("pickupBadge") or "")
+            ])).lower().strip()
+
+            item_has_negative_fulfillment = any(neg in item_fulfillment_text for neg in self.NEGATIVE_FULFILLMENT_PATTERNS)
+
+            # Check explicit inStorePickupAvailable boolean if present on item
+            item_pickup_opt_available = None
+            if "inStorePickupAvailable" in item and item["inStorePickupAvailable"] is not None:
+                item_pickup_opt_available = bool(item["inStorePickupAvailable"])
+            elif "pickupOptions" in item and isinstance(item["pickupOptions"], list):
+                pickup_opts = [opt for opt in item["pickupOptions"] if opt.get("fulfillmentMethod") == "PICKUP" or "pickup" in str(opt.get("method", "")).lower()]
+                if pickup_opts:
+                    item_pickup_opt_available = any(opt.get("available") is True for opt in pickup_opts)
+
+            has_contradictory_pickup = bool(
+                has_conflicting_price_store or 
+                is_shipping_only_price or 
+                item_has_negative_fulfillment or 
+                (item_pickup_opt_available is False)
+            )
+
+            # CRITICAL RULE (Reviewer check):
             # Only export local store prices if the page-level store context is strictly verified
-            # AND the item's own priceInfo does not conflict with expected store or specify shipping-only.
+            # AND the item's own offer context does not conflict with expected store, specify shipping-only,
+            # or contain negative/contradictory pickup indicators.
             # Otherwise preserve eligible unavailable identity with empty price values ("").
-            can_export_local_price = page_store_verified and not has_conflicting_price_store and not is_shipping_only_price
+            can_export_local_price = page_store_verified and not has_contradictory_pickup
 
             curr_price_obj = price_info.get("currentPrice", {}) or {}
             was_price_obj = price_info.get("wasPrice", {}) or {}

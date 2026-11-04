@@ -190,3 +190,113 @@ def test_parse_page_rejects_mismatched_store_context(parser):
     )
     assert len(records) == 0
     assert parser.last_page_status == "REJECTED_STORE_CONTEXT"
+
+def test_nextjs_item_level_negative_and_contradictory_pickup_scoped_to_offer(parser):
+    """
+    Reviewer Nov 4 Check:
+    Verifies that Next.js item-level negative wording or missing/contradictory pickup
+    context on individual product offers suppresses local store price export
+    while preserving product identity.
+    """
+    payload = {
+        "_source_run_metadata": {
+            "store_fulfillment_context": {
+                "store_id": "100",
+                "fulfillment_intent": "PICKUP",
+                "in_store_pickup_available": True
+            }
+        },
+        "item_stack": [
+            {
+                "id": "item_valid",
+                "name": "Great Value Butter",
+                "sellerName": "Walmart.com",
+                "inStorePickupAvailable": True,
+                "priceInfo": {
+                    "currentPrice": {"price": 3.98, "priceString": "$3.98"}
+                },
+                "canonicalUrl": "/ip/gv-butter/2001"
+            },
+            {
+                "id": "item_neg_wording_badge",
+                "name": "Great Value Milk",
+                "sellerName": "Walmart.com",
+                "fulfillmentBadge": "Pickup unavailable",
+                "priceInfo": {
+                    "currentPrice": {"price": 3.12, "priceString": "$3.12"}
+                },
+                "canonicalUrl": "/ip/gv-milk/2002"
+            },
+            {
+                "id": "item_neg_wording_title",
+                "name": "Great Value Cheese",
+                "sellerName": "Walmart.com",
+                "fulfillmentTitle": "Pickup not available at Store #100",
+                "priceInfo": {
+                    "currentPrice": {"price": 4.50, "priceString": "$4.50"}
+                },
+                "canonicalUrl": "/ip/gv-cheese/2003"
+            },
+            {
+                "id": "item_contradictory_pickup_opt",
+                "name": "Great Value Juice",
+                "sellerName": "Walmart.com",
+                "pickupOptions": [{"fulfillmentMethod": "PICKUP", "available": False}],
+                "priceInfo": {
+                    "currentPrice": {"price": 2.88, "priceString": "$2.88"}
+                },
+                "canonicalUrl": "/ip/gv-juice/2004"
+            },
+            {
+                "id": "item_pickup_disabled",
+                "name": "Specialty Bakery Bread",
+                "sellerName": "Walmart.com",
+                "inStorePickupAvailable": False,
+                "priceInfo": {
+                    "currentPrice": {"price": 5.00, "priceString": "$5.00"}
+                },
+                "canonicalUrl": "/ip/spec-bread/2005"
+            }
+        ]
+    }
+    html = f'<html><head><script id="__NEXT_DATA__" type="application/json">{json.dumps(payload)}</script></head><body></body></html>'
+    seen_keys = set()
+    records = parser.parse_page(
+        html_content=html,
+        category="Food",
+        sub_category="Pantry",
+        location_info={"store_id": "100"},
+        seen_keys=seen_keys,
+        enforce_store_validation=True
+    )
+
+    assert parser.last_page_status == "VALID"
+    assert len(records) == 5
+
+    rec_by_id = {r.url.split("/")[-1]: r for r in records}
+
+    # Item 1: Valid item has price extracted
+    r1 = rec_by_id["2001"]
+    assert r1.product_title == "Great Value Butter"
+    assert r1.regular_price == "3.98"
+
+    # Item 2: Negative wording 'Pickup unavailable' badge -> price suppressed
+    r2 = rec_by_id["2002"]
+    assert r2.product_title == "Great Value Milk"
+    assert r2.regular_price == ""
+
+    # Item 3: Negative wording 'Pickup not available' title -> price suppressed
+    r3 = rec_by_id["2003"]
+    assert r3.product_title == "Great Value Cheese"
+    assert r3.regular_price == ""
+
+    # Item 4: Contradictory pickup options (available: False) -> price suppressed
+    r4 = rec_by_id["2004"]
+    assert r4.product_title == "Great Value Juice"
+    assert r4.regular_price == ""
+
+    # Item 5: Explicit inStorePickupAvailable: False -> price suppressed
+    r5 = rec_by_id["2005"]
+    assert r5.product_title == "Specialty Bakery Bread"
+    assert r5.regular_price == ""
+

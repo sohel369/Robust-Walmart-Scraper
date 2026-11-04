@@ -313,4 +313,109 @@ def test_dom_fallback_rejects_negative_wording(parser):
     assert len(recs_not_avail) == 1
     assert recs_not_avail[0].regular_price == ""
 
+def test_dom_item_level_negative_and_contradictory_pickup_scoped_to_offer(parser):
+    """
+    Reviewer Nov 4 Check:
+    Negative wording and contradictory fulfillment tests must be SCOPED to the actual
+    product/store offer on the card, not merely a broader page label.
+    On a page with verified Store #100/PICKUP:
+    - Item with valid pickup: price extracted ($3.48).
+    - Item with 'Pickup unavailable': identity retained, price blank.
+    - Item with 'In-store pickup not available': identity retained, price blank.
+    - Item with 'Shipping only': identity retained, price blank.
+    - Item with data-pickup-available='false': identity retained, price blank.
+    """
+    html_mixed_offers = """
+    <html>
+      <head>
+        <meta name="store" content="100">
+        <meta name="fulfillment" content="PICKUP">
+      </head>
+      <body>
+        <!-- Page has verified Store #100 PICKUP context -->
+        <div data-automation-id="fulfillment-badge">Pickup available at Store #100</div>
+
+        <!-- Card 1: Valid in-store pickup item -->
+        <div data-item-id="card_valid_1">
+          <span data-automation-id="product-title">Great Value Whole Milk</span>
+          <span data-automation-id="product-price">$3.48</span>
+          <span data-automation-id="fulfillment-badge">In-store pickup available</span>
+          <a href="/ip/great-value-whole-milk/1001">View</a>
+        </div>
+
+        <!-- Card 2: Negative wording 'Pickup unavailable' -->
+        <div data-item-id="card_neg_unavail">
+          <span data-automation-id="product-title">Great Value Orange Juice</span>
+          <span data-automation-id="product-price">$4.12</span>
+          <span data-automation-id="fulfillment-badge">Pickup unavailable at Store #100</span>
+          <a href="/ip/great-value-orange-juice/1002">View</a>
+        </div>
+
+        <!-- Card 3: Negative wording 'In-store pickup not available' -->
+        <div data-item-id="card_neg_not_avail">
+          <span data-automation-id="product-title">Great Value Salted Butter</span>
+          <span data-automation-id="product-price">$2.98</span>
+          <span data-automation-id="fulfillment-badge">In-store pickup not available</span>
+          <a href="/ip/great-value-salted-butter/1003">View</a>
+        </div>
+
+        <!-- Card 4: Contradictory fulfillment 'Shipping only' -->
+        <div data-item-id="card_neg_shipping">
+          <span data-automation-id="product-title">Specialty Imported Pasta</span>
+          <span data-automation-id="product-price">$5.99</span>
+          <span data-automation-id="fulfillment-badge">Shipping only</span>
+          <a href="/ip/specialty-imported-pasta/1004">View</a>
+        </div>
+
+        <!-- Card 5: Missing/Disabled pickup attribute data-pickup-available='false' -->
+        <div data-item-id="card_neg_attr" data-pickup-available="false">
+          <span data-automation-id="product-title">Seasonal Holiday Cake</span>
+          <span data-automation-id="product-price">$12.00</span>
+          <a href="/ip/seasonal-holiday-cake/1005">View</a>
+        </div>
+      </body>
+    </html>
+    """
+    records = parser.parse_page(
+        html_content=html_mixed_offers,
+        category="Food",
+        sub_category="Pantry",
+        location_info={"store_id": "100"},
+        seen_keys=set(),
+        enforce_store_validation=True
+    )
+    # Page status is verified VALID:
+    assert parser.last_page_status == "VALID"
+    assert parser.last_store_validation["is_valid"] is True
+    # All 5 eligible products retained:
+    assert len(records) == 5
+
+    rec_by_id = {r.url.split("/")[-1]: r for r in records}
+
+    # Card 1: Valid item has local price captured
+    r1 = rec_by_id["1001"]
+    assert r1.product_title == "Great Value Whole Milk"
+    assert r1.regular_price == "3.48"
+
+    # Card 2: Negative 'Pickup unavailable' has price suppressed, identity preserved
+    r2 = rec_by_id["1002"]
+    assert r2.product_title == "Great Value Orange Juice"
+    assert r2.regular_price == ""
+
+    # Card 3: Negative 'In-store pickup not available' has price suppressed, identity preserved
+    r3 = rec_by_id["1003"]
+    assert r3.product_title == "Great Value Salted Butter"
+    assert r3.regular_price == ""
+
+    # Card 4: Contradictory 'Shipping only' has price suppressed, identity preserved
+    r4 = rec_by_id["1004"]
+    assert r4.product_title == "Specialty Imported Pasta"
+    assert r4.regular_price == ""
+
+    # Card 5: Contradictory pickup attribute has price suppressed, identity preserved
+    r5 = rec_by_id["1005"]
+    assert r5.product_title == "Seasonal Holiday Cake"
+    assert r5.regular_price == ""
+
+
 
