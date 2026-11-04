@@ -1,13 +1,14 @@
 # GIT PROVENANCE & FILE INTEGRITY MANIFEST (WALMART ENTRY #20)
 
-**Generated UTC:** 2026-11-04T02:41:54.992819+00:00  
+**Generated UTC:** 2026-11-04T02:42:10.125471+00:00  
 **Repository URL:** [https://github.com/sohel369/Robust-Walmart-Scraper.git](https://github.com/sohel369/Robust-Walmart-Scraper.git)  
 **Branch:** `master`  
-**HEAD Commit:** `954a3a11a5c92847f09ddfba5236df9ca5532bdf`  
-**Working Tree Clean:** `False`  
+**HEAD Commit:** `13c3490e4a07f145da3c915a6978ce5aabeaecaf`  
+**Working Tree Clean:** `True`  
 
 ## 1. Recent Authoritative Commits
 ```text
+13c3490 Enforce item-scoped negative and contradictory pickup verification; expand test suite to 50 tests
 954a3a1 fix(pipeline): isolate process cleanup, context traffic accounting, DOM negative fulfillment, and capture evidence
 23c3883 fix(pipeline): resolve reviewer edge cases for outer deadline, probe limits, DOM fulfillment, and offer fields
 7fbfada docs(audit): update provenance manifests and execution logs for November 2 release verification
@@ -15,7 +16,6 @@
 d3fb692 fix(pipeline): resolve reviewer edge cases for store validation, retention identity, deals, and bounded probe
 2ed5ef7 docs(lineage,audit): document code review blocker resolutions and update audit lineage manifests
 1211ff4 feat(offers,probe): support simultaneous volume and digital promotions and implement bounded probe diagnostic
-eadd683 fix(retention): preserve records with missing UPCs via unified identity and abort on unreadable catalog
 ```
 
 ## 2. Deliverable File SHA-256 Checksums
@@ -31,4 +31,4 @@ Reviewers without access to Git CLI can independently verify that the deliverabl
 
 ## 3. Remote Verification Link
 The full commit history, diffs, and trees can be inspected directly on GitHub at:
-`https://github.com/sohel369/Robust-Walmart-Scraper/tree/954a3a11a5c92847f09ddfba5236df9ca5532bdf`
+`https://github.com/sohel369/Robust-Walmart-Scraper/tree/13c3490e4a07f145da3c915a6978ce5aabeaecaf`
