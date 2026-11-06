@@ -1,18 +1,18 @@
 {
-  "generated_utc": "2026-11-06T14:49:00.587511+00:00",
+  "generated_utc": "2026-11-06T14:49:53.550740+00:00",
   "git_repository": "https://github.com/sohel369/Robust-Walmart-Scraper.git",
   "branch": "master",
-  "head_commit": "01c0c773c274befd93126212e29aa207341a8f0b",
-  "working_tree_clean": false,
+  "head_commit": "a0f7248ee1b4a8a2db4583dcc32262fd4889b85e",
+  "working_tree_clean": true,
   "recent_commits": [
+    "a0f7248 Resolve all 5 reviewer findings: probe traffic limits, strict fulfillment semantics, hash-bound checkpointing, strict input validation, and Azure wiring",
     "01c0c77 Update git provenance proof to df220f0",
     "df220f0 Sync probe diagnostic timestamps and logs",
     "49ade4a Update git provenance metadata to 13c3490",
     "13c3490 Enforce item-scoped negative and contradictory pickup verification; expand test suite to 50 tests",
     "954a3a1 fix(pipeline): isolate process cleanup, context traffic accounting, DOM negative fulfillment, and capture evidence",
     "23c3883 fix(pipeline): resolve reviewer edge cases for outer deadline, probe limits, DOM fulfillment, and offer fields",
-    "7fbfada docs(audit): update provenance manifests and execution logs for November 2 release verification",
-    "670aba4 docs(lineage,audit): document October 31 review resolutions and update audit lineage manifests"
+    "7fbfada docs(audit): update provenance manifests and execution logs for November 2 release verification"
   ],
   "file_sha256_checksums": {
     "src/browser_engine.py": {
@@ -37,18 +37,18 @@
     },
     "logs/azure_bounded_probe_result.json": {
       "exists": true,
-      "size_bytes": 3200,
-      "sha256": "a1c823a901b7b98fd3c051c22b8e1934d114cfe699eaf34a85d80ad473c0c9b8"
+      "size_bytes": 3201,
+      "sha256": "6bc673206f4821c31a12734cd0d929aed22cb39e7e08d71dddf92e365cbc7033"
     },
     "logs/azure_bounded_probe_live_traffic.json": {
       "exists": true,
       "size_bytes": 152,
-      "sha256": "89b29834899cf357d85e9892e052133325055ff10184e214f22959aee3050387"
+      "sha256": "8c70d0afac863a73e6282f23b332f02e67312d2d789c52ad2783dd2afa615781"
     },
     "logs/probe_response_capture_evidence.json": {
       "exists": true,
       "size_bytes": 102170,
-      "sha256": "4d8e5ad30d71d05480c067353d848e02d58e43c35f06c88739407676500ca30a"
+      "sha256": "38dcc05bf66ba5dd49777c6682417172bd9162452e901f3a47bd678e84837928"
     },
     "logs/probe_response_raw_capture.html": {
       "exists": true,

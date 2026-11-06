@@ -1,13 +1,14 @@
 # GIT PROVENANCE & FILE INTEGRITY MANIFEST (WALMART ENTRY #20)
 
-**Generated UTC:** 2026-11-06T14:49:00.587511+00:00  
+**Generated UTC:** 2026-11-06T14:49:53.550740+00:00  
 **Repository URL:** [https://github.com/sohel369/Robust-Walmart-Scraper.git](https://github.com/sohel369/Robust-Walmart-Scraper.git)  
 **Branch:** `master`  
-**HEAD Commit:** `01c0c773c274befd93126212e29aa207341a8f0b`  
-**Working Tree Clean:** `False`  
+**HEAD Commit:** `a0f7248ee1b4a8a2db4583dcc32262fd4889b85e`  
+**Working Tree Clean:** `True`  
 
 ## 1. Recent Authoritative Commits
 ```text
+a0f7248 Resolve all 5 reviewer findings: probe traffic limits, strict fulfillment semantics, hash-bound checkpointing, strict input validation, and Azure wiring
 01c0c77 Update git provenance proof to df220f0
 df220f0 Sync probe diagnostic timestamps and logs
 49ade4a Update git provenance metadata to 13c3490
@@ -15,7 +16,6 @@ df220f0 Sync probe diagnostic timestamps and logs
 954a3a1 fix(pipeline): isolate process cleanup, context traffic accounting, DOM negative fulfillment, and capture evidence
 23c3883 fix(pipeline): resolve reviewer edge cases for outer deadline, probe limits, DOM fulfillment, and offer fields
 7fbfada docs(audit): update provenance manifests and execution logs for November 2 release verification
-670aba4 docs(lineage,audit): document October 31 review resolutions and update audit lineage manifests
 ```
 
 ## 2. Deliverable File SHA-256 Checksums
@@ -27,9 +27,9 @@ Reviewers without access to Git CLI can independently verify that the deliverabl
 | `src/parser.py` | 26435 | `bafcc87c95affd932e8af12ad7b710a18d1cf749a6fbbf35108f29e547db5414` |
 | `src/storage_manager.py` | 24281 | `6b9af439e168ee71ba9892489009dc3414d5f04a8943ffd7e7aee963b8a64008` |
 | `scripts/run_azure_bounded_probe.py` | 28948 | `db1811d8c0401b20909053ecf4c4647b2d835d5fdca3dba3c8d8e985a3f4f54e` |
-| `logs/azure_bounded_probe_result.json` | 3200 | `a1c823a901b7b98fd3c051c22b8e1934d114cfe699eaf34a85d80ad473c0c9b8` |
-| `logs/azure_bounded_probe_live_traffic.json` | 152 | `89b29834899cf357d85e9892e052133325055ff10184e214f22959aee3050387` |
-| `logs/probe_response_capture_evidence.json` | 102170 | `4d8e5ad30d71d05480c067353d848e02d58e43c35f06c88739407676500ca30a` |
+| `logs/azure_bounded_probe_result.json` | 3201 | `6bc673206f4821c31a12734cd0d929aed22cb39e7e08d71dddf92e365cbc7033` |
+| `logs/azure_bounded_probe_live_traffic.json` | 152 | `8c70d0afac863a73e6282f23b332f02e67312d2d789c52ad2783dd2afa615781` |
+| `logs/probe_response_capture_evidence.json` | 102170 | `38dcc05bf66ba5dd49777c6682417172bd9162452e901f3a47bd678e84837928` |
 | `logs/probe_response_raw_capture.html` | 67808 | `7a7274062b6394e3bc2cd6d8fa93208964ab42c18dcf5348bff30f40a6eadf02` |
 | `data/output/walmart_contest_submission_500_records.json` | 523839 | `7f3087796526df777aed7b3ae75e9a9119299d084745464fb67098c40dd2924b` |
 | `data/output/submission_audit_statistics.json` | 13612 | `7169a12582345c7865ed8c273c4ed1c8a98897396f66a386670b71391d1b2e3e` |
@@ -39,4 +39,4 @@ Reviewers without access to Git CLI can independently verify that the deliverabl
 
 ## 3. Remote Verification Link
 The full commit history, diffs, and trees can be inspected directly on GitHub at:
-`https://github.com/sohel369/Robust-Walmart-Scraper/tree/01c0c773c274befd93126212e29aa207341a8f0b`
+`https://github.com/sohel369/Robust-Walmart-Scraper/tree/a0f7248ee1b4a8a2db4583dcc32262fd4889b85e`
