@@ -17,9 +17,12 @@ In accordance with reviewer instructions:
 | **Target Probe Route** | 1 Department Only | Food (`/browse/food/976759`) |
 | **Maximum Page Depth** | 1 Page (`page=1`) | No deep pagination during probe |
 | **Maximum Record Limit** | 10 to 20 Products | Strict hard ceiling (`max_records_override=20`) |
-| **Timeout Ceiling** | 15.0 seconds per request | Fast fail-safe to prevent hanging |
-| **Total Probe Egress** | < 2.0 MB | Negligible bandwidth footprint |
-| **Output Artifact** | `logs/azure_bounded_probe_result.json` | Stores HTTP status, GraphQL headers, store context, and latency |
+| **Timeout Ceiling** | 15.0 seconds whole-run outer deadline | Fast fail-safe with isolated process-tree termination |
+| **Total Probe Requests Limit** | Max 15 requests | Enforced per-request admission boundary |
+| **Total Probe Egress Budget** | < 2.0 MB (2,097,152 bytes) | Strict byte boundary enforced on each response body |
+| **Traffic Ledger** | `logs/azure_bounded_probe_live_traffic.json` | Real-time progressive ledger persisted as events occur |
+| **Raw Capture Evidence** | `logs/probe_response_raw_capture.html` | Exact raw response bytes covered by SHA-256 hash |
+| **Output Artifact** | `logs/azure_bounded_probe_result.json` | Stores HTTP status, store context, latency, traffic accounting |
 
 ---
 

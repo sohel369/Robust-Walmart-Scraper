@@ -1,6 +1,8 @@
 import os
 import json
+import time
 import shutil
+import hashlib
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timezone
@@ -33,13 +35,86 @@ class StorageManager:
     def get_checkpoint_rows_path(self, store_id: str) -> str:
         return os.path.join(self.checkpoint_dir, f"checkpoint_{store_id}_rows.jsonl")
 
+    def sync_to_azure_blob(self, local_filepath: str, blob_name: str) -> bool:
+        """
+        Durable Azure runtime persistence: uploads local file to Azure Blob Storage
+        if AZURE_STORAGE_CONNECTION_STRING is provided in runtime environment.
+        """
+        conn_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+        if not conn_str:
+            return False
+        container_name = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "walmart-scraper-data")
+        try:
+            from azure.storage.blob import BlobServiceClient
+            blob_service_client = BlobServiceClient.from_connection_string(conn_str)
+            container_client = blob_service_client.get_container_client(container_name)
+            if not container_client.exists():
+                container_client.create_container()
+            with open(local_filepath, "rb") as data:
+                container_client.upload_blob(name=blob_name, data=data, overwrite=True)
+            logger.info(f"DURABLE AZURE STORAGE: Successfully synced {local_filepath} to {container_name}/{blob_name}")
+            return True
+        except ImportError:
+            logger.debug("azure-storage-blob package not installed; local storage active.")
+            return False
+        except Exception as e:
+            logger.warning(f"Azure Blob Storage sync error for {local_filepath}: {e}")
+            return False
+
+    def download_from_azure_blob(self, blob_name: str, local_filepath: str) -> bool:
+        """Downloads a durable blob from Azure to local filesystem for resume/recovery."""
+        conn_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+        if not conn_str:
+            return False
+        container_name = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "walmart-scraper-data")
+        try:
+            from azure.storage.blob import BlobServiceClient
+            blob_service_client = BlobServiceClient.from_connection_string(conn_str)
+            blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+            if not blob_client.exists():
+                return False
+            os.makedirs(os.path.dirname(os.path.abspath(local_filepath)), exist_ok=True)
+            with open(local_filepath, "wb") as f:
+                download_stream = blob_client.download_blob()
+                f.write(download_stream.readall())
+            logger.info(f"DURABLE AZURE STORAGE: Restored {blob_name} to {local_filepath}")
+            return True
+        except Exception as e:
+            logger.warning(f"Azure Blob Storage download error for {blob_name}: {e}")
+            return False
+
     def load_checkpoint(self, store_id: str) -> Dict[str, Any]:
-        """Loads completed categories, seen keys, and staging filepath for resumption."""
+        """
+        Loads completed categories, seen keys, and staging filepath for resumption.
+        Enforces strict hash-bound coherence between checkpoint metadata and rows snapshot.
+        If failure occurred during row snapshot copying, diverged metadata is rejected
+        to prevent row loss or premature route skipping.
+        """
         cp_path = self.get_checkpoint_path(store_id)
         if os.path.exists(cp_path):
             try:
                 with open(cp_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
+
+                expected_sha = data.get("rows_snapshot_sha256")
+                if expected_sha:
+                    rows_path = self.get_checkpoint_rows_path(store_id)
+                    if not os.path.exists(rows_path):
+                        logger.warning("Checkpoint metadata exists but row snapshot file is missing. Failing closed to prevent row loss.")
+                        return {"completed_subcategories": [], "scraped_ids": [], "staging_filepath": None}
+                    hasher = hashlib.sha256()
+                    with open(rows_path, "rb") as rf:
+                        for chunk in iter(lambda: rf.read(65536), b""):
+                            hasher.update(chunk)
+                    actual_sha = hasher.hexdigest()
+                    if actual_sha != expected_sha:
+                        logger.warning(
+                            f"Checkpoint divergence detected: metadata expects row hash {expected_sha[:12]}, "
+                            f"got {actual_sha[:12]}. Rejecting diverged checkpoint to prevent row loss."
+                        )
+                        return {"completed_subcategories": [], "scraped_ids": [], "staging_filepath": None}
+
+                return data
             except Exception as e:
                 logger.warning(f"Could not read checkpoint file {cp_path}: {e}")
         return {"completed_subcategories": [], "scraped_ids": [], "staging_filepath": None}
@@ -51,26 +126,63 @@ class StorageManager:
         scraped_ids: List[str],
         staging_filepath: Optional[str] = None
     ) -> None:
-        """Saves current state and active staging file to checkpoint."""
+        """
+        Saves current state and active staging file to checkpoint as a coherent,
+        hash-bound generation. Both metadata and rows snapshot are staged to temporary
+        files, validated with SHA-256 and row count, and switched atomically only
+        after both metadata and rows are durable.
+        """
         cp_path = self.get_checkpoint_path(store_id)
-        temp_path = f"{cp_path}.tmp"
+        rows_path = self.get_checkpoint_rows_path(store_id)
+
+        meta_temp = f"{cp_path}.tmp"
+        rows_temp = f"{rows_path}.tmp"
+
+        rows_sha256 = ""
+        rows_count = 0
+
+        # Step 1: Stage rows snapshot to rows_temp FIRST and compute SHA-256 hash
+        if staging_filepath and os.path.exists(staging_filepath):
+            with open(staging_filepath, "rb") as sf, open(rows_temp, "wb") as rf:
+                hasher = hashlib.sha256()
+                for chunk in iter(lambda: sf.read(65536), b""):
+                    hasher.update(chunk)
+                    rf.write(chunk)
+                rf.flush()
+                os.fsync(rf.fileno())
+            rows_sha256 = hasher.hexdigest()
+
+            with open(rows_temp, "r", encoding="utf-8") as rf:
+                rows_count = sum(1 for line in rf if line.strip())
+
+        # Step 2: Bind row SHA-256, count, and generation timestamp into checkpoint metadata
+        gen_id = f"gen_{int(time.time()*1000)}"
         data = {
+            "generation_id": gen_id,
             "store_id": store_id,
             "last_updated": datetime.now(timezone.utc).isoformat(),
             "staging_filepath": staging_filepath,
             "completed_subcategories": completed_subcategories,
-            "scraped_ids": list(set(scraped_ids))
+            "scraped_ids": list(set(scraped_ids)),
+            "rows_snapshot_sha256": rows_sha256,
+            "rows_snapshot_count": rows_count
         }
-        with open(temp_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-        shutil.move(temp_path, cp_path)
 
-        # Synchronize staged rows into dedicated persistent checkpoint rows snapshot
-        if staging_filepath and os.path.exists(staging_filepath):
-            rows_path = self.get_checkpoint_rows_path(store_id)
-            rows_temp = f"{rows_path}.tmp"
-            shutil.copyfile(staging_filepath, rows_temp)
+        # Step 3: Write metadata to meta_temp and sync to disk
+        with open(meta_temp, "w", encoding="utf-8") as mf:
+            json.dump(data, mf, indent=2)
+            mf.flush()
+            os.fsync(mf.fileno())
+
+        # Step 4: Atomic switch - only switch after both rows and metadata are durable
+        if rows_sha256 and os.path.exists(rows_temp):
             shutil.move(rows_temp, rows_path)
+        shutil.move(meta_temp, cp_path)
+
+        # Step 5: Optional sync to Azure Blob Storage
+        self.sync_to_azure_blob(cp_path, f"checkpoints/{os.path.basename(cp_path)}")
+        if rows_sha256 and os.path.exists(rows_path):
+            self.sync_to_azure_blob(rows_path, f"checkpoints/{os.path.basename(rows_path)}")
 
     def get_record_identity(self, record: Dict[str, Any]) -> str:
         """
@@ -101,10 +213,26 @@ class StorageManager:
             # Checkpoint metadata was retired upon verified run completion
             return 0
 
+        try:
+            with open(cp_path, "r", encoding="utf-8") as f:
+                cp_data = json.load(f)
+        except Exception:
+            return 0
+
         rows_path = self.get_checkpoint_rows_path(store_id)
         restored = 0
         if not os.path.exists(rows_path):
             return restored
+
+        expected_rows_sha = cp_data.get("rows_snapshot_sha256")
+        if expected_rows_sha:
+            hasher = hashlib.sha256()
+            with open(rows_path, "rb") as rf:
+                for chunk in iter(lambda: rf.read(65536), b""):
+                    hasher.update(chunk)
+            if hasher.hexdigest() != expected_rows_sha:
+                logger.error(f"Cannot restore from corrupt or diverged row snapshot for store #{store_id}")
+                return 0
 
         existing_upcs = set()
         existing_urls = set()
@@ -319,6 +447,9 @@ class StorageManager:
         # 3. Replace target with new validated dataset atomically
         shutil.move(temp_final, target_output)
         logger.info(f"SUCCESS: New production dataset committed atomically to {target_output} ({total_count} records)")
+
+        # Sync production dataset to Azure Blob Storage if configured
+        self.sync_to_azure_blob(target_output, f"output/{os.path.basename(target_output)}")
 
         # Clear checkpoint on clean completion
         self.clear_checkpoint(store_id)

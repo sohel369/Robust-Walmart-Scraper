@@ -30,6 +30,14 @@ def generate_provenance():
     status_short = run_git(["git", "status", "--short"])
     
     tracked_files = [
+        "src/browser_engine.py",
+        "src/parser.py",
+        "src/storage_manager.py",
+        "scripts/run_azure_bounded_probe.py",
+        "logs/azure_bounded_probe_result.json",
+        "logs/azure_bounded_probe_live_traffic.json",
+        "logs/probe_response_capture_evidence.json",
+        "logs/probe_response_raw_capture.html",
         "data/output/walmart_contest_submission_500_records.json",
         "data/output/submission_audit_statistics.json",
         "data/input/Walmart_Category_URLs.csv",

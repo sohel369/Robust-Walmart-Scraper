@@ -20,14 +20,20 @@ az group create --name $ResourceGroup --location $Location
 Write-Host "=== 2. Creating Azure Container Registry: $AcrName ===" -ForegroundColor Cyan
 az acr create --resource-group $ResourceGroup --name $AcrName --sku Basic --admin-enabled true
 
-Write-Host "=== 3. Building and Pushing Container Image to ACR ===" -ForegroundColor Cyan
+Write-Host "=== 3. Creating Persistent Azure Storage & File Share ===" -ForegroundColor Cyan
+$StorageAccountName = ("sawalmart" + (Get-Random -Minimum 1000 -Maximum 9999))
+az storage account create --resource-group $ResourceGroup --name $StorageAccountName --location $Location --sku Standard_LRS
+$StorageAccountKey = (az storage account keys list --resource-group $ResourceGroup --account-name $StorageAccountName --query "[0].value" --output tsv)
+az storage share create --name "walmart-scraper-share" --account-name $StorageAccountName --account-key $StorageAccountKey
+
+Write-Host "=== 4. Building and Pushing Container Image to ACR ===" -ForegroundColor Cyan
 az acr build --registry $AcrName --image "$($ImageName):$($Tag)" -f azure/Dockerfile .
 
 $AcrLoginServer = (az acr show --name $AcrName --query loginServer --output tsv)
 $AcrUsername = (az acr credential show --name $AcrName --query username --output tsv)
 $AcrPassword = (az acr credential show --name $AcrName --query "passwords[0].value" --output tsv)
 
-Write-Host "=== 4. Launching Azure Container Instance ===" -ForegroundColor Cyan
+Write-Host "=== 5. Launching Azure Container Instance with Persistent Mount ===" -ForegroundColor Cyan
 az container create `
   --resource-group $ResourceGroup `
   --name $AciName `
@@ -38,8 +44,13 @@ az container create `
   --cpu 2 `
   --memory 4 `
   --restart-policy Never `
+  --azure-file-volume-account-name $StorageAccountName `
+  --azure-file-volume-account-key $StorageAccountKey `
+  --azure-file-volume-share-name "walmart-scraper-share" `
+  --azure-file-volume-mount-path "/app/data" `
   --environment-variables `
       WALMART_PROXY_URL="$env:WALMART_PROXY_URL" `
-      AZURE_STORAGE_CONNECTION_STRING="$env:AZURE_STORAGE_CONNECTION_STRING"
+      AZURE_STORAGE_CONNECTION_STRING="$env:AZURE_STORAGE_CONNECTION_STRING" `
+      AZURE_STORAGE_CONTAINER_NAME="walmart-scraper-data"
 
 Write-Host "=== Deployment Succeeded! Container job active in Azure. ===" -ForegroundColor Green

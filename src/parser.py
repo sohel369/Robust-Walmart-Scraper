@@ -19,6 +19,30 @@ class WalmartPageParser:
         "out of stock", "ineligible", "shipping only", "delivery only"
     )
 
+    ALLOWED_PICKUP_INTENTS = {"PICKUP", "STORE_PICKUP", "IN_STORE_PICKUP", "CURBSIDE_PICKUP"}
+
+    @staticmethod
+    def parse_strict_bool(val: Any) -> Optional[bool]:
+        """
+        Strictly parses boolean values, avoiding Python's bool('false') -> True trap.
+        Returns True for True, 'true', '1', 'yes', 't'.
+        Returns False for False, 'false', '0', 'no', 'f', 'none', 'null'.
+        Returns None if val is None.
+        """
+        if val is None:
+            return None
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, (int, float)):
+            return bool(val)
+        if isinstance(val, str):
+            s = val.strip().lower()
+            if s in ("true", "1", "yes", "t"):
+                return True
+            if s in ("false", "0", "no", "f", "none", "null"):
+                return False
+        return False
+
     def __init__(self, normalizer: DataNormalizer):
         self.normalizer = normalizer
         self.last_raw_items_count: int = 0
@@ -64,25 +88,17 @@ class WalmartPageParser:
         postal_code = str(raw_postal_code).strip() if raw_postal_code is not None else ""
 
         # Validate types and exact modality
-        # in_store: boolean check (string 'false' is strictly False, string 'true' is True)
+        # in_store: strict boolean check (string 'false' is strictly False, string 'true' is True)
         in_store = False
         if raw_in_store is not None:
-            if isinstance(raw_in_store, str):
-                in_store = raw_in_store.strip().lower() in ("true", "1", "yes")
-            elif isinstance(raw_in_store, bool):
-                in_store = raw_in_store
-            elif isinstance(raw_in_store, (int, float)):
-                in_store = bool(raw_in_store)
+            parsed_in_store = self.parse_strict_bool(raw_in_store)
+            in_store = bool(parsed_in_store is True)
 
-        # Modality: MUST be strictly PICKUP (reject NOT_PICKUP, NO_PICKUP, SHIPPING, DELIVERY)
-        is_exact_pickup = False
-        if intent:
-            if "NOT" in intent or "NO_" in intent or "NON" in intent:
-                is_exact_pickup = False
-            elif intent in ("PICKUP", "STORE_PICKUP", "IN_STORE_PICKUP", "CURBSIDE_PICKUP"):
-                is_exact_pickup = True
-            elif intent.startswith("PICKUP"):
-                is_exact_pickup = True
+        # Modality: MUST be strictly allowlisted PICKUP (reject NOT_PICKUP, NO_PICKUP, PICKUP_UNAVAILABLE, SHIPPING, DELIVERY)
+        is_exact_pickup = bool(
+            intent in self.ALLOWED_PICKUP_INTENTS and 
+            not any(neg in intent for neg in ("UNAVAILABLE", "NOT", "NO_", "NON", "DISABLED", "INELIGIBLE"))
+        )
 
         # FAIL CLOSED: All essential store fulfillment fields must exist and match expected context
         has_context = bool(actual_store_id and intent and (raw_in_store is not None))
@@ -364,13 +380,18 @@ class WalmartPageParser:
                 logger.debug(f"Excluding product with approximate weight: {title} ({weight})")
                 continue
 
-            # 5. Pricing & Item-level context validation (Reviewer check: scoped to product/store offer)
+            # 5. Pricing & Item-level context validation (Reviewer check: strict allowlisted semantics)
             price_info = item.get("priceInfo", {}) or {}
             item_store = str(price_info.get("storeId") or price_info.get("store_id") or item.get("storeId") or "").strip()
             item_fulfillment = str(price_info.get("fulfillmentType") or price_info.get("fulfillment") or fulfillment_type).upper()
 
             has_conflicting_price_store = bool(item_store and item_store != expected_store)
-            is_shipping_only_price = ("SHIPPING" in item_fulfillment and "PICKUP" not in item_fulfillment) or ("SHIPPING_ONLY" in item_fulfillment) or ("shipping_only" in fulfillment_type.lower())
+
+            # Strict non-pickup fulfillment checks (SHIPPING, DELIVERY, FREIGHT, MAIL, EXPEDITED)
+            NON_PICKUP_KEYWORDS = ("SHIPPING", "DELIVERY", "SHIP", "MAIL", "FREIGHT", "EXPEDITED")
+            is_non_pickup_fulfillment = (
+                any(kw in item_fulfillment for kw in NON_PICKUP_KEYWORDS) and "PICKUP" not in item_fulfillment
+            ) or ("SHIPPING_ONLY" in item_fulfillment) or ("DELIVERY" in item_fulfillment and "PICKUP" not in item_fulfillment) or any(kw in fulfillment_type.lower() for kw in ("shipping", "delivery"))
 
             # Check item-level fulfillment badges and negative wording scoped to this specific item offer
             item_fulfillment_text = " ".join(filter(None, [
@@ -384,25 +405,25 @@ class WalmartPageParser:
 
             item_has_negative_fulfillment = any(neg in item_fulfillment_text for neg in self.NEGATIVE_FULFILLMENT_PATTERNS)
 
-            # Check explicit inStorePickupAvailable boolean if present on item
+            # Check explicit inStorePickupAvailable boolean using strict parser (handles string "false", "0", False)
             item_pickup_opt_available = None
             if "inStorePickupAvailable" in item and item["inStorePickupAvailable"] is not None:
-                item_pickup_opt_available = bool(item["inStorePickupAvailable"])
+                item_pickup_opt_available = self.parse_strict_bool(item["inStorePickupAvailable"])
             elif "pickupOptions" in item and isinstance(item["pickupOptions"], list):
                 pickup_opts = [opt for opt in item["pickupOptions"] if opt.get("fulfillmentMethod") == "PICKUP" or "pickup" in str(opt.get("method", "")).lower()]
                 if pickup_opts:
-                    item_pickup_opt_available = any(opt.get("available") is True for opt in pickup_opts)
+                    item_pickup_opt_available = any(self.parse_strict_bool(opt.get("available")) is True for opt in pickup_opts)
 
             has_contradictory_pickup = bool(
                 has_conflicting_price_store or 
-                is_shipping_only_price or 
+                is_non_pickup_fulfillment or 
                 item_has_negative_fulfillment or 
                 (item_pickup_opt_available is False)
             )
 
             # CRITICAL RULE (Reviewer check):
             # Only export local store prices if the page-level store context is strictly verified
-            # AND the item's own offer context does not conflict with expected store, specify shipping-only,
+            # AND the item's own offer context does not conflict with expected store, specify shipping/delivery,
             # or contain negative/contradictory pickup indicators.
             # Otherwise preserve eligible unavailable identity with empty price values ("").
             can_export_local_price = page_store_verified and not has_contradictory_pickup

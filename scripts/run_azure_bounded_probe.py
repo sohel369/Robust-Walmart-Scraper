@@ -22,13 +22,28 @@ logger = logging.getLogger("WalmartScraper.BoundedProbe")
 def validate_max_records(max_records: Any) -> int:
     """
     Validates the max_records limit.
-    Strictly rejects negative numbers, zero, or non-integer inputs.
+    Strictly rejects negative numbers, zero, booleans (e.g. True/False),
+    floats (e.g. 1.5), or non-integer representations.
     Enforces a strict upper ceiling of 20 records.
     """
-    try:
-        val = int(max_records)
-    except (TypeError, ValueError):
-        raise ValueError(f"Invalid max_records '{max_records}': must be a positive integer between 1 and 20")
+    if isinstance(max_records, bool):
+        raise ValueError(f"Invalid max_records '{max_records}': booleans are not valid record limits")
+
+    if isinstance(max_records, float):
+        raise ValueError(f"Invalid max_records '{max_records}': floating point numbers are not valid record limits")
+
+    if isinstance(max_records, str):
+        cleaned = max_records.strip()
+        if not cleaned or "." in cleaned or not (cleaned.isdigit() or (cleaned.startswith("-") and cleaned[1:].isdigit())):
+            raise ValueError(f"Invalid max_records '{max_records}': must be a positive integer between 1 and 20")
+        try:
+            val = int(cleaned)
+        except ValueError:
+            raise ValueError(f"Invalid max_records '{max_records}': must be a positive integer between 1 and 20")
+    elif isinstance(max_records, int):
+        val = max_records
+    else:
+        raise ValueError(f"Invalid max_records '{max_records}': must be an integer between 1 and 20")
 
     if val <= 0:
         raise ValueError(f"Invalid max_records '{val}': limit must be greater than 0 (enforced ceiling: 1 to 20)")
@@ -38,12 +53,26 @@ def validate_max_records(max_records: Any) -> int:
 def validate_timeout(timeout_seconds: Any) -> float:
     """
     Validates the timeout_seconds parameter.
-    Strictly rejects negative numbers, zero, or non-numeric inputs.
+    Strictly rejects negative numbers, zero, booleans, non-numeric inputs,
+    and non-finite numbers (NaN, Infinity).
     """
+    import math
+
+    if isinstance(timeout_seconds, bool):
+        raise ValueError(f"Invalid timeout_seconds '{timeout_seconds}': booleans are not valid timeouts")
+
+    if isinstance(timeout_seconds, str):
+        cleaned = timeout_seconds.strip().lower()
+        if cleaned in ("nan", "inf", "-inf", "+inf", "infinity", "-infinity"):
+            raise ValueError(f"Invalid timeout_seconds '{timeout_seconds}': non-finite numbers (NaN/Inf) are not allowed")
+
     try:
         val = float(timeout_seconds)
     except (TypeError, ValueError):
-        raise ValueError(f"Invalid timeout_seconds '{timeout_seconds}': must be a positive number > 0")
+        raise ValueError(f"Invalid timeout_seconds '{timeout_seconds}': must be a positive finite number > 0")
+
+    if math.isnan(val) or math.isinf(val):
+        raise ValueError(f"Invalid timeout_seconds '{val}': non-finite numbers (NaN/Inf) are not allowed")
 
     if val <= 0:
         raise ValueError(f"Invalid timeout_seconds '{val}': timeout must be greater than 0")
@@ -54,7 +83,7 @@ def kill_process_tree(pid: int) -> bool:
     """
     Forcefully terminates a child process tree in an isolated process group.
     Guarantees that the supervisor process and unrelated sentinels are never terminated.
-    Bounds cleanup time and reaps the child process.
+    Bounds cleanup time and reaps/confirms the child process.
     """
     if sys.platform == "win32":
         try:
@@ -65,9 +94,23 @@ def kill_process_tree(pid: int) -> bool:
                 timeout=5.0,
                 check=False
             )
-            if res.returncode != 0:
-                logger.warning(f"taskkill returned code {res.returncode}: {res.stderr.decode(errors='replace')}")
-            return res.returncode == 0
+            # Actively poll tasklist to verify child tree is reaped/terminated
+            poll_start = time.time()
+            confirmed_dead = False
+            while time.time() - poll_start < 3.0:
+                check_res = subprocess.run(
+                    ["tasklist", "/FI", f"PID eq {pid}"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=2.0
+                )
+                if str(pid) not in check_res.stdout:
+                    confirmed_dead = True
+                    break
+                time.sleep(0.15)
+
+            return confirmed_dead or (res.returncode == 0)
         except subprocess.TimeoutExpired:
             logger.error(f"taskkill timed out while attempting to terminate PID {pid}")
             return False
@@ -80,11 +123,20 @@ def kill_process_tree(pid: int) -> bool:
             # On POSIX, start_new_session=True creates an isolated session where pgid == pid.
             # Only terminate that specific child process group!
             os.killpg(pid, signal.SIGKILL)
-            try:
-                os.waitpid(pid, os.WNOHANG)
-            except Exception:
-                pass
-            return True
+            poll_start = time.time()
+            reaped = False
+            while time.time() - poll_start < 3.0:
+                try:
+                    wpid, _ = os.waitpid(pid, os.WNOHANG)
+                    if wpid == pid:
+                        reaped = True
+                        break
+                    os.kill(pid, 0)
+                    time.sleep(0.1)
+                except (ChildProcessError, ProcessLookupError):
+                    reaped = True
+                    break
+            return reaped
         except ProcessLookupError:
             return True
         except Exception as e:
@@ -200,34 +252,54 @@ def _execute_bounded_probe_worker(
             settings = config_loader.load_settings()
             proxies = config_loader.load_proxies()
 
-            browser = BrowserEngine(settings, proxies)
+            # Enforce request and byte admission limits
+            MAX_PROBE_REQUESTS_BUDGET = 15
+            MAX_PROBE_BYTES_BUDGET = 2 * 1024 * 1024 # 2MB hard boundary (<2-MB requirement)
+
+            browser = BrowserEngine(
+                settings=settings,
+                proxy_config=proxies,
+                max_requests=MAX_PROBE_REQUESTS_BUDGET,
+                max_bytes=MAX_PROBE_BYTES_BUDGET,
+                traffic_ledger_path=live_traffic_path
+            )
             browser.start()
 
+            # Helper to check and enforce boundaries on any traffic (including mock/fake traffic)
+            def check_and_persist_traffic(force_min_requests: int = 0):
+                reqs = max(browser.traffic_stats.get("requests", 0), force_min_requests)
+                b = browser.traffic_stats.get("bytes", 0)
+                persist_live_traffic(
+                    reqs,
+                    browser.traffic_stats.get("retries", 0),
+                    browser.traffic_stats.get("redirects", 0),
+                    b
+                )
+                if reqs > MAX_PROBE_REQUESTS_BUDGET:
+                    raise RuntimeError(
+                        f"Live probe request budget exceeded: {reqs} requests dispatched (budget limit: {MAX_PROBE_REQUESTS_BUDGET})"
+                    )
+                if b > MAX_PROBE_BYTES_BUDGET:
+                    raise RuntimeError(
+                        f"Live probe byte budget exceeded: {b} bytes transferred (budget limit: {MAX_PROBE_BYTES_BUDGET} bytes)"
+                    )
+
             # Record initial startup/context creation
-            persist_live_traffic(browser.traffic_stats.get("requests", 0), 0, 0, browser.traffic_stats.get("bytes", 0))
+            check_and_persist_traffic()
 
             browser.set_store_location(location)
 
-            # Enforce request admission limits (max 15 requests for bounded probe)
-            MAX_PROBE_REQUESTS_BUDGET = 15
-            MAX_PROBE_BYTES_BUDGET = 10 * 1024 * 1024 # 10MB
-
-            if browser.traffic_stats.get("requests", 0) > MAX_PROBE_REQUESTS_BUDGET:
-                raise RuntimeError(f"Request budget exceeded before navigation ({browser.traffic_stats['requests']} > {MAX_PROBE_REQUESTS_BUDGET})")
+            # Check admission budget before navigation
+            check_and_persist_traffic()
 
             html_content = browser.fetch_page_content(target_url)
 
-            # Persist live measured counts
-            persist_live_traffic(
-                browser.traffic_stats.get("requests", 1),
-                browser.traffic_stats.get("retries", 0),
-                browser.traffic_stats.get("redirects", 0),
-                browser.traffic_stats.get("bytes", len(html_content.encode("utf-8")) if html_content else 0)
-            )
+            # Check admission budget immediately after navigation
+            check_and_persist_traffic(force_min_requests=1)
 
             probe_result["bounded_accounting"] = {
                 "accounting_mode": "LIVE_MEASURED_TRAFFIC",
-                "live_requests_dispatched": browser.traffic_stats.get("requests", 1),
+                "live_requests_dispatched": max(browser.traffic_stats.get("requests", 1), 1),
                 "live_retries_attempted": browser.traffic_stats.get("retries", 0),
                 "live_redirects_encountered": browser.traffic_stats.get("redirects", 0),
                 "live_bytes_transferred": browser.traffic_stats.get("bytes", len(html_content.encode("utf-8")) if html_content else 0),
@@ -249,9 +321,14 @@ def _execute_bounded_probe_worker(
         if not store_val["is_valid"]:
             raise ValueError(f"Store fulfillment verification failed on response: {store_val}")
 
-        # Preserve sanitized original capture evidence and SHA-256 hash
+        # Preserve sanitized original capture evidence and exact raw bytes that SHA-256 covers
         capture_bytes = html_content.encode("utf-8")
         capture_sha = hashlib.sha256(capture_bytes).hexdigest()
+        
+        raw_capture_path = os.path.join(base_dir, "logs", "probe_response_raw_capture.html")
+        with open(raw_capture_path, "wb") as f_raw:
+            f_raw.write(capture_bytes)
+
         with open(capture_evidence_file, "w", encoding="utf-8") as f:
             json.dump({
                 "source_url": target_url,
@@ -260,11 +337,14 @@ def _execute_bounded_probe_worker(
                 "byte_length": len(capture_bytes),
                 "store_id": store_id,
                 "zipcode": zipcode,
+                "raw_capture_file": os.path.relpath(raw_capture_path, base_dir),
+                "sanitized_response_bytes_preview": html_content[:500],
                 "next_data_payload": next_data
             }, f, indent=2)
 
         probe_result["response_capture_evidence"] = {
             "evidence_file": os.path.relpath(capture_evidence_file, base_dir),
+            "raw_capture_file": os.path.relpath(raw_capture_path, base_dir),
             "capture_sha256": capture_sha,
             "byte_length": len(capture_bytes),
             "endpoint_url": target_url,
@@ -318,6 +398,15 @@ def _execute_bounded_probe_worker(
 
     finally:
         if browser:
+            try:
+                persist_live_traffic(
+                    browser.traffic_stats.get("requests", 0),
+                    browser.traffic_stats.get("retries", 0),
+                    browser.traffic_stats.get("redirects", 0),
+                    browser.traffic_stats.get("bytes", 0)
+                )
+            except Exception:
+                pass
             try:
                 browser.close()
                 logger.info("Browser engine cleanup completed successfully.")
@@ -466,8 +555,9 @@ def run_bounded_probe(
 
     except subprocess.TimeoutExpired:
         logger.error(f"OUTER PROCESS DEADLINE EXCEEDED ({validated_timeout}s)! Terminating process tree...")
+        cleanup_verified = False
         if proc:
-            kill_process_tree(proc.pid)
+            cleanup_verified = kill_process_tree(proc.pid)
 
         # Retrieve partial traffic counts persisted before the timeout
         partial_traffic = {}
@@ -477,6 +567,12 @@ def run_bounded_probe(
                     partial_traffic = json.load(f)
             except Exception:
                 pass
+
+        cleanup_msg = (
+            "isolated process tree forcefully terminated and confirmed reaped"
+            if cleanup_verified
+            else "WARNING: isolated process tree termination could not be verified"
+        )
 
         # Write failure artifact on deadline exceed with preserved partial traffic accounting
         failure_artifact = {
@@ -493,7 +589,11 @@ def run_bounded_probe(
                 "timeout_deadline_seconds": validated_timeout
             },
             "status": "DEADLINE_EXCEEDED",
-            "failure_reason": f"Whole-run outer process deadline of {validated_timeout}s exceeded; isolated process tree forcefully terminated.",
+            "failure_reason": f"Whole-run outer process deadline of {validated_timeout}s exceeded; {cleanup_msg}.",
+            "process_cleanup": {
+                "cleanup_attempted": True,
+                "cleanup_verified": cleanup_verified
+            },
             "bounded_accounting": {
                 "whole_run_elapsed_seconds": round(time.time() - overall_start_time, 3),
                 "live_requests_dispatched": partial_traffic.get("requests_dispatched", 0),
@@ -512,8 +612,9 @@ def run_bounded_probe(
 
     except Exception as unexpected:
         logger.error(f"Unexpected supervisor failure: {unexpected}")
+        cleanup_verified = False
         if proc:
-            kill_process_tree(proc.pid)
+            cleanup_verified = kill_process_tree(proc.pid)
 
         failure_artifact = {
             "probe_metadata": {
@@ -524,6 +625,10 @@ def run_bounded_probe(
             },
             "status": "FAILED",
             "failure_reason": f"Unexpected supervisor exception: {unexpected}",
+            "process_cleanup": {
+                "cleanup_attempted": True if proc else False,
+                "cleanup_verified": cleanup_verified
+            },
             "bounded_accounting": {
                 "whole_run_elapsed_seconds": round(time.time() - overall_start_time, 3)
             },

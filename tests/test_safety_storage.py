@@ -160,3 +160,51 @@ def test_indefinite_store_assortment_retention(tmp_path):
     assert catalog_by_upc["078742351999"]["crawl_date"] == "2026-10-20"
     assert catalog_by_upc["078742351999"]["product_title"] == "Currently Unavailable Item 2"
 
+def test_interrupted_checkpoint_recovery_prevents_row_loss(tmp_path):
+    """
+    Reviewer Point 3 (Nov 6 inspection):
+    Checkpoints must be a coherent, hash-bound generation.
+    Simulating a failure during row snapshot copy must NOT allow metadata and
+    rows to diverge. If divergence occurs, recovery must fail closed and refuse
+    to skip routes or lose rows.
+    """
+    storage = StorageManager(base_dir=str(tmp_path), min_records_threshold=1)
+    store_id = "100"
+
+    staging_file = os.path.join(storage.staging_dir, "staging_interrupted.jsonl")
+    storage.write_staging_record(staging_file, {"id": "A", "upc": "111", "url": "/ip/item-a/1", "title": "Item A"})
+
+    # Checkpoint after Route 1 (Food)
+    storage.save_checkpoint(store_id, ["Food"], ["A"], staging_file)
+
+    cp = storage.load_checkpoint(store_id)
+    assert "Food" in cp["completed_subcategories"]
+    assert "rows_snapshot_sha256" in cp
+    assert cp["rows_snapshot_count"] == 1
+
+    # Route 2 (Pets): Add Item B to staging
+    storage.write_staging_record(staging_file, {"id": "B", "upc": "222", "url": "/ip/item-b/2", "title": "Item B"})
+
+    # Checkpoint after Route 2
+    storage.save_checkpoint(store_id, ["Food", "Pets"], ["A", "B"], staging_file)
+    cp2 = storage.load_checkpoint(store_id)
+    assert "Pets" in cp2["completed_subcategories"]
+    assert cp2["rows_snapshot_count"] == 2
+
+    # Now simulate the reviewer's failure injection:
+    # Tamper with rows snapshot or simulate incomplete copy
+    rows_path = storage.get_checkpoint_rows_path(store_id)
+    with open(rows_path, "w", encoding="utf-8") as f:
+        f.write('{"id": "A", "upc": "111", "url": "/ip/item-a/1", "title": "Item A"}\n') # Row B truncated/lost!
+
+    # Load checkpoint must detect hash divergence and refuse to mark Pets complete!
+    diverged_cp = storage.load_checkpoint(store_id)
+    assert "Pets" not in diverged_cp["completed_subcategories"]
+    assert diverged_cp["completed_subcategories"] == [] # Failed closed!
+
+    # Restore must reject diverged row snapshot
+    fresh_staging = os.path.join(storage.staging_dir, "staging_fresh.jsonl")
+    restored = storage.restore_checkpoint_rows(store_id, fresh_staging)
+    assert restored == 0 # Refused corrupt restore!
+
+

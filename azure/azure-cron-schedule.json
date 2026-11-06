@@ -1,7 +1,28 @@
 {
   "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
   "contentVersion": "1.0.0.0",
-  "parameters": {},
+  "parameters": {
+    "subscriptionId": {
+      "type": "String",
+      "metadata": {
+        "description": "Azure Subscription ID for container group execution"
+      }
+    },
+    "resourceGroup": {
+      "type": "String",
+      "defaultValue": "rg-walmart-scraper-prod",
+      "metadata": {
+        "description": "Azure Resource Group containing the container group"
+      }
+    },
+    "containerGroupName": {
+      "type": "String",
+      "defaultValue": "aci-walmart-scraper-job",
+      "metadata": {
+        "description": "Azure Container Group instance name"
+      }
+    }
+  },
   "triggers": {
     "Recurrence_Twice_Weekly": {
       "type": "Recurrence",
@@ -29,7 +50,7 @@
       "type": "Http",
       "inputs": {
         "method": "POST",
-        "uri": "https://management.azure.com/subscriptions/@{parameters('subscriptionId')}/resourceGroups/@{parameters('resourceGroup')}/providers/Microsoft.ContainerInstance/containerGroups/aci-walmart-scraper-job/start?api-version=2023-05-01",
+        "uri": "https://management.azure.com/subscriptions/@{parameters('subscriptionId')}/resourceGroups/@{parameters('resourceGroup')}/providers/Microsoft.ContainerInstance/containerGroups/@{parameters('containerGroupName')}/start?api-version=2023-05-01",
         "authentication": {
           "type": "ManagedServiceIdentity"
         }

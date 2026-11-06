@@ -300,3 +300,80 @@ def test_nextjs_item_level_negative_and_contradictory_pickup_scoped_to_offer(par
     assert r5.product_title == "Specialty Bakery Bread"
     assert r5.regular_price == ""
 
+def test_string_false_and_delivery_fulfillment_suppress_price_and_reject_pickup_unavailable(parser):
+    """
+    Reviewer Point 2 (Nov 6 inspection):
+    1. inStorePickupAvailable='false' (string) must be strictly treated as False (not Python truthy).
+    2. priceInfo.fulfillmentType='DELIVERY' must suppress local price (export empty string '').
+    3. intent='PICKUP_UNAVAILABLE' must fail page validation closed (not match startswith('PICKUP')).
+    """
+    # 1. Page with intent='PICKUP_UNAVAILABLE' must strictly fail validation
+    payload_bad_intent = {
+        "_source_run_metadata": {
+            "store_fulfillment_context": {
+                "store_id": "100",
+                "fulfillment_intent": "PICKUP_UNAVAILABLE",
+                "in_store_pickup_available": True
+            }
+        },
+        "item_stack": [{"id": "item_1", "name": "Item 1", "sellerName": "Walmart.com"}]
+    }
+    report = parser.validate_store_fulfillment_response(payload_bad_intent, expected_store_id="100")
+    assert report["is_valid"] is False
+
+    # 2. Page with valid Store #100 / PICKUP, but items have string "false" and "DELIVERY"
+    payload_items = {
+        "_source_run_metadata": {
+            "store_fulfillment_context": {
+                "store_id": "100",
+                "fulfillment_intent": "PICKUP",
+                "in_store_pickup_available": True
+            }
+        },
+        "item_stack": [
+            {
+                "id": "item_string_false",
+                "name": "String False Item",
+                "sellerName": "Walmart.com",
+                "inStorePickupAvailable": "false",  # STRING FALSE!
+                "priceInfo": {
+                    "currentPrice": {"price": 3.25, "priceString": "$3.25"}
+                },
+                "canonicalUrl": "/ip/string-false-item/3001"
+            },
+            {
+                "id": "item_delivery",
+                "name": "Delivery Only Item",
+                "sellerName": "Walmart.com",
+                "inStorePickupAvailable": True,
+                "priceInfo": {
+                    "fulfillmentType": "DELIVERY",  # DELIVERY FULFILLMENT!
+                    "currentPrice": {"price": 3.25, "priceString": "$3.25"}
+                },
+                "canonicalUrl": "/ip/delivery-item/3002"
+            }
+        ]
+    }
+    html = f'<html><head><script id="__NEXT_DATA__" type="application/json">{json.dumps(payload_items)}</script></head><body></body></html>'
+    records = parser.parse_page(
+        html_content=html,
+        category="Food",
+        sub_category="Pantry",
+        location_info={"store_id": "100"},
+        seen_keys=set(),
+        enforce_store_validation=True
+    )
+    assert parser.last_page_status == "VALID"
+    assert len(records) == 2
+
+    r_false = next(r for r in records if "3001" in r.url)
+    assert r_false.product_title == "String False Item"
+    assert r_false.regular_price == ""  # Suppressed!
+    assert r_false.sale_price == ""
+
+    r_deliv = next(r for r in records if "3002" in r.url)
+    assert r_deliv.product_title == "Delivery Only Item"
+    assert r_deliv.regular_price == ""  # Suppressed!
+    assert r_deliv.sale_price == ""
+
+

@@ -1,20 +1,60 @@
 {
-  "generated_utc": "2026-11-04T03:00:12.454921+00:00",
+  "generated_utc": "2026-11-06T14:49:00.587511+00:00",
   "git_repository": "https://github.com/sohel369/Robust-Walmart-Scraper.git",
   "branch": "master",
-  "head_commit": "df220f0f8a06e5a87e5566a74303ef8b3be01a56",
-  "working_tree_clean": true,
+  "head_commit": "01c0c773c274befd93126212e29aa207341a8f0b",
+  "working_tree_clean": false,
   "recent_commits": [
+    "01c0c77 Update git provenance proof to df220f0",
     "df220f0 Sync probe diagnostic timestamps and logs",
     "49ade4a Update git provenance metadata to 13c3490",
     "13c3490 Enforce item-scoped negative and contradictory pickup verification; expand test suite to 50 tests",
     "954a3a1 fix(pipeline): isolate process cleanup, context traffic accounting, DOM negative fulfillment, and capture evidence",
     "23c3883 fix(pipeline): resolve reviewer edge cases for outer deadline, probe limits, DOM fulfillment, and offer fields",
     "7fbfada docs(audit): update provenance manifests and execution logs for November 2 release verification",
-    "670aba4 docs(lineage,audit): document October 31 review resolutions and update audit lineage manifests",
-    "d3fb692 fix(pipeline): resolve reviewer edge cases for store validation, retention identity, deals, and bounded probe"
+    "670aba4 docs(lineage,audit): document October 31 review resolutions and update audit lineage manifests"
   ],
   "file_sha256_checksums": {
+    "src/browser_engine.py": {
+      "exists": true,
+      "size_bytes": 8774,
+      "sha256": "1d621fb34e3544a24a203c4b25abde4e3b26db6c8123f4a63e29866dc52200a2"
+    },
+    "src/parser.py": {
+      "exists": true,
+      "size_bytes": 26435,
+      "sha256": "bafcc87c95affd932e8af12ad7b710a18d1cf749a6fbbf35108f29e547db5414"
+    },
+    "src/storage_manager.py": {
+      "exists": true,
+      "size_bytes": 24281,
+      "sha256": "6b9af439e168ee71ba9892489009dc3414d5f04a8943ffd7e7aee963b8a64008"
+    },
+    "scripts/run_azure_bounded_probe.py": {
+      "exists": true,
+      "size_bytes": 28948,
+      "sha256": "db1811d8c0401b20909053ecf4c4647b2d835d5fdca3dba3c8d8e985a3f4f54e"
+    },
+    "logs/azure_bounded_probe_result.json": {
+      "exists": true,
+      "size_bytes": 3200,
+      "sha256": "a1c823a901b7b98fd3c051c22b8e1934d114cfe699eaf34a85d80ad473c0c9b8"
+    },
+    "logs/azure_bounded_probe_live_traffic.json": {
+      "exists": true,
+      "size_bytes": 152,
+      "sha256": "89b29834899cf357d85e9892e052133325055ff10184e214f22959aee3050387"
+    },
+    "logs/probe_response_capture_evidence.json": {
+      "exists": true,
+      "size_bytes": 102170,
+      "sha256": "4d8e5ad30d71d05480c067353d848e02d58e43c35f06c88739407676500ca30a"
+    },
+    "logs/probe_response_raw_capture.html": {
+      "exists": true,
+      "size_bytes": 67808,
+      "sha256": "7a7274062b6394e3bc2cd6d8fa93208964ab42c18dcf5348bff30f40a6eadf02"
+    },
     "data/output/walmart_contest_submission_500_records.json": {
       "exists": true,
       "size_bytes": 523839,
@@ -32,13 +72,13 @@
     },
     "logs/walmart_production_run.log": {
       "exists": true,
-      "size_bytes": 19217,
-      "sha256": "6803deb3050aad604268952390ee8dbf9f8a9a513f7f3b19c6699fa2852de305"
+      "size_bytes": 19639,
+      "sha256": "50f4f011c7c25956c5a06f24b885f5561aade6e90f7ca48a4702aaccfab19310"
     },
     "logs/source_to_output_reconciliation_audit.json": {
       "exists": true,
       "size_bytes": 4902,
-      "sha256": "9f7bbd7b97ef0439fdff24b538856849b884084afe79dca52d3dc281a9c7ede6"
+      "sha256": "f0d8ac7be4ecb56a7233fbf8bc773cc574c95fb0f3bd51e04892ec1a1b486674"
     }
   }
 }
